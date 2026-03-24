@@ -8,6 +8,8 @@ import {
   saveProject,
   generateId,
 } from "@/services/storage";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export function QuickAddPopup() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -16,7 +18,8 @@ export function QuickAddPopup() {
   const [loaded, setLoaded] = useState(false);
   const inputRef = useCallback((node: HTMLInputElement | null) => {
     if (node) {
-      setTimeout(() => node.focus(), 50);
+      // Tauri windows need time to gain OS focus before input focus works
+      setTimeout(() => node.focus(), 150);
     }
   }, []);
 
@@ -29,6 +32,13 @@ export function QuickAddPopup() {
         loadSettings(),
       ]);
       if (ignore) return;
+
+      // Apply theme — quick-add window doesn't go through MainApp init
+      if (settings.theme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
 
       setProjects(allProjects);
       setLoaded(true);
@@ -92,53 +102,75 @@ export function QuickAddPopup() {
 
   if (!loaded) {
     return (
-      <div className="flex h-full items-center justify-center bg-surface">
-        <p className="text-label text-on-surface-variant">Loading...</p>
+      <div className="flex h-full items-center justify-center bg-surface-lowest">
+        <p className="text-sm text-on-surface-variant">Loading...</p>
       </div>
     );
   }
 
   if (projects.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center bg-surface">
-        <p className="text-label text-on-surface-variant">
-          No projects yet. Create one first.
+      <div className="flex h-full items-center justify-center bg-surface-lowest p-6">
+        <p className="text-sm text-on-surface-variant">
+          No projects yet. Create one in the main window first.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col bg-surface p-3" onKeyDown={handleKeyDown}>
-      <div className="mb-2 flex items-center gap-2">
-        <span className="text-micro uppercase tracking-widest text-on-surface-variant/50">
-          Project:
+    <div
+      className="flex h-full flex-col bg-surface-lowest p-5 border border-white/10 rounded-lg"
+      onKeyDown={handleKeyDown}
+    >
+      {/* Header: project selector */}
+      <div className="mb-4 flex items-center gap-3">
+        <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/50">
+          Project
         </span>
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() =>
             setSelectedIndex((prev) => (prev + 1) % projects.length)
           }
-          className="rounded bg-surface-high px-2 py-0.5 text-label font-medium text-secondary hover:opacity-80 transition-opacity"
           tabIndex={-1}
         >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mr-1.5">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
           {projects[selectedIndex]?.name}
-        </button>
-        <span className="text-micro text-on-surface-variant/30">
+        </Button>
+        <span className="ml-auto text-xs text-on-surface-variant/30">
           Tab to switch
         </span>
       </div>
 
-      <input
+      {/* Task input */}
+      <Input
         ref={inputRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="What needs to be done?"
-        className="flex-1 rounded-lg bg-surface-high border-none px-4 py-2 text-xs text-foreground placeholder:text-on-surface-variant/50 focus:ring-1 focus:ring-primary focus:outline-none"
+        className="h-10 text-sm"
       />
 
-      <div className="mt-2 flex justify-between text-micro text-on-surface-variant/30">
-        <span>Enter to save</span>
-        <span>Esc to cancel</span>
+      {/* Footer hints */}
+      <div className="mt-4 flex items-center justify-between text-xs text-on-surface-variant/40">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5">
+            <kbd className="rounded bg-surface-high px-1.5 py-0.5 text-[10px] font-mono text-on-surface-variant/60">Enter</kbd>
+            save
+          </span>
+          <span className="flex items-center gap-1.5">
+            <kbd className="rounded bg-surface-high px-1.5 py-0.5 text-[10px] font-mono text-on-surface-variant/60">Esc</kbd>
+            cancel
+          </span>
+        </div>
+        <span className="flex items-center gap-1.5">
+          <kbd className="rounded bg-surface-high px-1.5 py-0.5 text-[10px] font-mono text-on-surface-variant/60">Tab</kbd>
+          switch project
+        </span>
       </div>
     </div>
   );
