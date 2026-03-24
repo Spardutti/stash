@@ -9,6 +9,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { exit } from "@tauri-apps/plugin-process";
 import {
   useHotkey,
+  useQuickViewHotkey,
   useMinimizeToTray,
   useSettingsActions,
   useSettingsInitialized,
@@ -36,8 +37,6 @@ function toTauriShortcut(hotkey: string): string {
     .join("+");
 }
 
-const QUICK_VIEW_SHORTCUT = "Control+Shift+Space";
-
 let didInit = false;
 
 function MainApp() {
@@ -45,6 +44,7 @@ function MainApp() {
   const settingsActions = useSettingsActions();
   const initialized = useSettingsInitialized();
   const hotkey = useHotkey();
+  const quickViewHotkey = useQuickViewHotkey();
   const minimizeToTray = useMinimizeToTray();
   const [error, setError] = useState<string | null>(null);
 
@@ -135,12 +135,13 @@ function MainApp() {
   useEffect(() => {
     if (!initialized || !minimizeToTray) return;
 
+    const shortcut = toTauriShortcut(quickViewHotkey);
     let registered = true;
 
-    unregister(QUICK_VIEW_SHORTCUT)
+    unregister(shortcut)
       .catch(() => {})
       .then(() =>
-        register(QUICK_VIEW_SHORTCUT, (event) => {
+        register(shortcut, (event) => {
           if (event.state === "Pressed") {
             openQuickViewWindow();
           }
@@ -153,10 +154,10 @@ function MainApp() {
 
     return () => {
       if (registered) {
-        unregister(QUICK_VIEW_SHORTCUT).catch(() => {});
+        unregister(shortcut).catch(() => {});
       }
     };
-  }, [initialized]);
+  }, [initialized, quickViewHotkey]);
 
   if (error) {
     return (
