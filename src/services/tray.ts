@@ -1,53 +1,36 @@
-import { TrayIcon } from "@tauri-apps/api/tray";
-import { Menu, MenuItem, PredefinedMenuItem } from "@tauri-apps/api/menu";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { exit } from "@tauri-apps/plugin-process";
+import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { openQuickAddWindow } from "./quickAddWindow";
 import { openQuickViewWindow } from "./quickViewWindow";
 
-let tray: TrayIcon | null = null;
+let initialized = false;
+let unlisteners: UnlistenFn[] = [];
 
 export async function initTray(): Promise<void> {
-  if (tray) return;
+  if (initialized) return;
 
-  const openItem = await MenuItem.new({
-    id: "open",
-    text: "Open Stash",
-    action: async () => {
-      const win = getCurrentWindow();
-      await win.show();
-      await win.setFocus();
-    },
+  await invoke("create_tray");
+
+  const unlistenAdd = await listen("tray-quick-add", () => {
+    openQuickAddWindow();
   });
 
-  const quickAddItem = await MenuItem.new({
-    id: "quick-add",
-    text: "Quick Add",
-    action: () => openQuickAddWindow(),
+  const unlistenView = await listen("tray-quick-view", () => {
+    openQuickViewWindow();
   });
 
-  const quickViewItem = await MenuItem.new({
-    id: "quick-view",
-    text: "Quick View",
-    action: () => openQuickViewWindow(),
-  });
+  unlisteners = [unlistenAdd, unlistenView];
+  initialized = true;
+}
 
-  const separator = await PredefinedMenuItem.new({ item: "Separator" });
+export async function destroyTray(): Promise<void> {
+  if (!initialized) return;
 
-  const quitItem = await MenuItem.new({
-    id: "quit",
-    text: "Quit Stash",
-    action: () => exit(0),
-  });
+  for (const unlisten of unlisteners) {
+    unlisten();
+  }
+  unlisteners = [];
 
-  const menu = await Menu.new({
-    items: [openItem, separator, quickAddItem, quickViewItem, separator, quitItem],
-  });
-
-  tray = await TrayIcon.new({
-    id: "main-tray",
-    menu,
-    tooltip: "Stash — Task Management",
-    menuOnLeftClick: true,
-  });
+  await invoke("destroy_tray");
+  initialized = false;
 }
