@@ -1,0 +1,11 @@
+{
+  "identifier": "quick-add-capability",
+  "windows": ["quick-add"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "core:event:allow-emit",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-appdata-write-recursive"
+  ]
+}

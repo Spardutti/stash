@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Stash | Task Console</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-container": "#4197d6",
+                        "secondary-container": "#474746",
+                        "inverse-on-surface": "#313030",
+                        "primary-fixed": "#5d5f5f",
+                        "surface-container-lowest": "#0e0e0e",
+                        "tertiary-fixed": "#006398",
+                        "on-background": "#e5e2e1",
+                        "surface-container-highest": "#353534",
+                        "surface-tint": "#c6c6c6",
+                        "secondary-fixed": "#c8c6c5",
+                        "on-error": "#690005",
+                        "surface": "#131313",
+                        "outline-variant": "#474747",
+                        "tertiary-fixed-dim": "#004b74",
+                        "surface-dim": "#131313",
+                        "inverse-primary": "#5d5f5f",
+                        "on-surface": "#e5e2e1",
+                        "primary-fixed-dim": "#454747",
+                        "tertiary": "#cde5ff",
+                        "outline": "#919191",
+                        "surface-variant": "#353534",
+                        "on-surface-variant": "#c6c6c6",
+                        "primary": "#ffffff",
+                        "on-tertiary-fixed": "#ffffff",
+                        "surface-container-low": "#1c1b1b",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "error": "#ffb4ab",
+                        "surface-container-high": "#2a2a2a",
+                        "on-secondary-container": "#e4e2e1",
+                        "on-secondary-fixed-variant": "#3b3b3b",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-container": "#201f1f",
+                        "on-tertiary-container": "#000000",
+                        "secondary-fixed-dim": "#acabaa",
+                        "on-tertiary-fixed-variant": "#cde5ff",
+                        "background": "#0a0a0a",
+                        "on-tertiary": "#001d32",
+                        "primary-container": "#d4d4d4",
+                        "error-container": "#93000a",
+                        "on-primary-fixed": "#ffffff",
+                        "secondary": "#c8c6c5",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#3a3939",
+                        "on-primary": "#1a1c1c",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "on-primary-container": "#000000",
+                        "on-secondary": "#1b1c1c"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { background-color: #0a0a0a; color: #e5e2e1; font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20; font-size: 18px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0a0a0a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+        .task-row:hover { background-color: rgba(255,255,255,0.03); }
+        .task-checkbox:checked + span { text-decoration: line-through; color: #919191; }
+    </style>
+</head>
+<body class="flex overflow-hidden h-screen">
+<aside class="fixed left-0 top-0 h-full flex flex-col py-4 px-2 bg-[#0e0e0e] text-white font-inter text-[0.75rem] leading-none h-screen w-48 border-r border-[#474747]/15 transition-all duration-150 ease-in-out z-20">
+<div class="mb-6 px-2">
+<div class="flex items-center gap-2 mb-1">
+<div class="w-6 h-6 rounded bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-[14px]" style="font-variation-settings: 'FILL' 1;">terminal</span>
+</div>
+<span class="font-bold tracking-widest uppercase text-white">STASH</span>
+</div>
+<p class="text-[10px] text-on-surface-variant/50 uppercase tracking-widest mt-4 mb-2">Projects</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-2 px-2 py-2 rounded-lg bg-[#2a2a2a] text-white font-medium border-l-2 border-white transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="folder">folder</span>
+<span>Shallow Hope</span>
+</a>
+<a class="flex items-center gap-2 px-2 py-2 rounded-lg text-[#c6c6c6] hover:text-white hover:bg-[#131313] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="videogame_asset">videogame_asset</span>
+<span>My Game</span>
+</a>
+<a class="flex items-center gap-2 px-2 py-2 rounded-lg text-[#c6c6c6] hover:text-white hover:bg-[#131313] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span>Personal</span>
+</a>
+</nav>
+<div class="mt-auto space-y-1 pt-4 border-t border-outline-variant/15">
+<button class="w-full flex items-center justify-center gap-2 py-2 mb-4 bg-primary text-on-primary font-bold rounded-lg hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span>New Project</span>
+</button>
+<a class="flex items-center gap-2 px-2 py-2 rounded-lg text-[#c6c6c6] hover:text-white hover:bg-[#131313] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</div>
+</aside>
+<main class="flex-1 ml-48 flex flex-col h-full bg-background relative">
+<header class="flex justify-between items-center w-full px-4 h-10 bg-[#131313] text-white font-inter text-sm tracking-tighter border-b border-[#474747]/15 sticky top-0 z-10">
+<div class="flex items-center gap-4">
+<span class="font-bold tracking-widest uppercase text-white text-[10px]">Active Workspaces / Shallow Hope</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative flex items-center group">
+<span class="material-symbols-outlined absolute left-2 text-[#c6c6c6] group-focus-within:text-white transition-colors">search</span>
+<input class="bg-[#2a2a2a] border-none text-[11px] h-7 pl-8 pr-3 w-48 rounded focus:ring-1 focus:ring-white transition-all outline-none" placeholder="Global Search..." type="text"/>
+</div>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+<div class="max-w-5xl mx-auto">
+<div class="flex items-end justify-between mb-8 border-b border-outline-variant/10 pb-4">
+<div>
+<h1 class="text-[2.25rem] font-bold tracking-tighter leading-none mb-2">Shallow Hope</h1>
+<p class="text-on-surface-variant text-sm flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+32 Pending tasks
+</p>
+</div>
+<div class="flex gap-1 bg-surface-container-lowest p-1 rounded-lg border border-outline-variant/10">
+<button class="px-4 py-1.5 text-[0.6875rem] font-bold uppercase tracking-widest bg-primary text-on-primary rounded-md">All</button>
+<button class="px-4 py-1.5 text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant hover:text-white transition-colors">Pending</button>
+<button class="px-4 py-1.5 text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant hover:text-white transition-colors">Done</button>
+</div>
+</div>
+<div class="space-y-px">
+<div class="task-row flex items-center gap-3 px-2 py-2.5 transition-colors group cursor-pointer border-b border-outline-variant/5">
+<input class="w-4 h-4 bg-transparent border-outline-variant rounded-sm focus:ring-0 checked:bg-primary checked:border-primary transition-all task-checkbox" type="checkbox"/>
+<span class="text-sm font-medium truncate flex-1">Implement WebSocket handshake for real-time logs</span>
+<div class="hidden items-center gap-1 group-hover:flex">
+<button class="rounded p-1 text-on-surface-variant/50 hover:text-white transition-colors"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+<button class="rounded p-1 text-on-surface-variant/50 hover:text-error transition-colors"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+<div class="task-row flex items-center gap-3 px-2 py-2.5 transition-colors group cursor-pointer border-b border-outline-variant/5">
+<input class="w-4 h-4 bg-transparent border-outline-variant rounded-sm focus:ring-0 transition-all task-checkbox" type="checkbox"/>
+<span class="text-sm font-medium truncate flex-1">Refactor legacy data parsing logic in v2 controller</span>
+<div class="hidden items-center gap-1 group-hover:flex">
+<button class="rounded p-1 text-on-surface-variant/50 hover:text-white transition-colors"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+<button class="rounded p-1 text-on-surface-variant/50 hover:text-error transition-colors"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="h-6 bg-surface-container-lowest border-t border-outline-variant/10 flex items-center justify-between px-3 text-[10px] text-on-surface-variant/60 font-mono">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary shadow-[0_0_8px_rgba(205,229,255,0.4)]"></span>
+<span>READY</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span>TASKS: 32/114</span>
+<span class="bg-surface-container-high px-2 text-white font-bold">STASH v0.1.0</span>
+</div>
+</footer>
+</main>
+</body></html>
