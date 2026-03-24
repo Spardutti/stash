@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -96,6 +96,18 @@ export function TodoList({ project }: TodoListProps) {
   const handleDragCancel = () => {
     setActiveId(null);
   };
+
+  // Listen for Ctrl+D bulk delete event from MainLayout
+  useEffect(() => {
+    const handleBulkDelete = () => {
+      if (doneCount > 0) {
+        actions.bulkDeleteDone(project.id);
+      }
+    };
+    window.addEventListener("stash:bulk-delete-done", handleBulkDelete);
+    return () =>
+      window.removeEventListener("stash:bulk-delete-done", handleBulkDelete);
+  }, [actions, project.id, doneCount]);
 
   const pendingCount = pendingTodos.length;
 

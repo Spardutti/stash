@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface TodoInputProps {
   onAdd: (text: string) => void;
@@ -6,6 +6,15 @@ interface TodoInputProps {
 
 export function TodoInput({ onAdd }: TodoInputProps) {
   const [text, setText] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Listen for Ctrl+L focus event from MainLayout
+  useEffect(() => {
+    const handleFocus = () => inputRef.current?.focus();
+    window.addEventListener("stash:focus-todo-input", handleFocus);
+    return () =>
+      window.removeEventListener("stash:focus-todo-input", handleFocus);
+  }, []);
 
   const handleSubmit = () => {
     const trimmed = text.trim();
@@ -32,6 +41,7 @@ export function TodoInput({ onAdd }: TodoInputProps) {
         <line x1="5" y1="12" x2="19" y2="12" />
       </svg>
       <input
+        ref={inputRef}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
