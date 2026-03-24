@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import {
   DndContext,
@@ -86,28 +86,51 @@ export function TodoList({ project }: TodoListProps) {
     return { pendingTodos: pending, doneTodos: done, doneCount: done.length };
   }, [project.todos]);
 
+  // Staggered bulk delete — IDs being dismissed one by one
+  const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set());
+
+  const staggerDeleteDone = useCallback(() => {
+    if (doneTodos.length === 0) return;
+
+    const ids = doneTodos.map((t) => t.id);
+    // Stagger: add each ID 50ms apart
+    ids.forEach((id, i) => {
+      setTimeout(() => {
+        setDismissingIds((prev) => new Set(prev).add(id));
+      }, i * 50);
+    });
+    // After all animations, persist the delete — don't clear dismissingIds
+    // until the store update removes the items (avoids flash-back)
+    setTimeout(async () => {
+      await actions.bulkDeleteDone(project.id);
+      setDismissingIds(new Set());
+    }, ids.length * 50 + 300);
+  }, [doneTodos, actions, project.id]);
+
   // Use local order during drag, store order otherwise
   const pendingIds = useMemo(() => {
     if (localPendingOrder) return localPendingOrder;
     return pendingTodos.map((t) => t.id);
   }, [localPendingOrder, pendingTodos]);
 
-  // Build visible todos from the current pending order
+  // Build visible todos from the current pending order, filtering out dismissing items
   const visibleTodos = useMemo(() => {
     const pendingMap = new Map(pendingTodos.map((t) => [t.id, t]));
     const orderedPending = pendingIds
       .map((id) => pendingMap.get(id))
       .filter((t): t is Todo => t !== undefined);
 
+    const filteredDone = doneTodos.filter((t) => !dismissingIds.has(t.id));
+
     switch (filter) {
       case "pending":
         return orderedPending;
       case "done":
-        return doneTodos;
+        return filteredDone;
       default:
-        return [...orderedPending, ...doneTodos];
+        return [...orderedPending, ...filteredDone];
     }
-  }, [filter, pendingIds, pendingTodos, doneTodos]);
+  }, [filter, pendingIds, pendingTodos, doneTodos, dismissingIds]);
 
   const activeTodo: Todo | undefined = activeId
     ? project.todos.find((t) => t.id === activeId)
@@ -155,7 +178,7 @@ export function TodoList({ project }: TodoListProps) {
   useEffect(() => {
     const handleBulkDelete = () => {
       if (doneCount > 0) {
-        actions.bulkDeleteDone(project.id);
+        staggerDeleteDone();
       }
     };
     window.addEventListener("stash:bulk-delete-done", handleBulkDelete);
@@ -219,7 +242,7 @@ export function TodoList({ project }: TodoListProps) {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <BulkActions projectId={project.id} doneCount={doneCount} />
+              <BulkActions projectId={project.id} doneCount={doneCount} onDelete={staggerDeleteDone} />
               <TodoFilters />
             </div>
           </div>
