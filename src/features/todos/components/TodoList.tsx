@@ -249,7 +249,7 @@ export function TodoList({ project }: TodoListProps) {
                 items={pendingIds}
                 strategy={verticalListSortingStrategy}
               >
-                <AnimatePresence mode="popLayout" initial={false}>
+                <AnimatePresence initial={false}>
                   {visibleTodos.map((todo) => (
                     <TodoItem
                       key={todo.id}

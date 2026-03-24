@@ -23,12 +23,10 @@ interface TodoItemProps {
 const enterAnimation = { opacity: 1, x: 0, height: "auto" };
 const exitAnimation = {
   opacity: 0,
-  x: -30,
-  height: 0,
+  x: -20,
   transition: {
-    opacity: { duration: 0.2 },
-    x: { duration: 0.25 },
-    height: { delay: 0.1, duration: 0.2 },
+    opacity: { duration: 0.15 },
+    x: { duration: 0.2 },
   },
 };
 const layoutTransition = { type: "spring" as const, stiffness: 400, damping: 30 };
