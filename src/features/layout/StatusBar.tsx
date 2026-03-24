@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
+
 interface StatusBarProps {
   pendingCount: number;
   totalCount: number;
@@ -5,6 +8,12 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ pendingCount, totalCount, projectName }: StatusBarProps) {
+  const [version, setVersion] = useState("");
+
+  useEffect(() => {
+    getVersion().then(setVersion).catch(() => setVersion("dev"));
+  }, []);
+
   return (
     <footer className="flex h-6 shrink-0 items-center justify-between border-t border-border/10 bg-surface-lowest px-3 font-mono text-micro text-on-surface-variant/60">
       <div className="flex items-center gap-4">
@@ -19,7 +28,7 @@ export function StatusBar({ pendingCount, totalCount, projectName }: StatusBarPr
       <div className="flex items-center gap-4">
         <span>TASKS: {pendingCount}/{totalCount}</span>
         <span className="bg-surface-high px-2 font-bold text-foreground">
-          STASH v0.1.0
+          STASH v{version}
         </span>
       </div>
     </footer>
