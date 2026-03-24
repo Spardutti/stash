@@ -1,10 +1,17 @@
-import { useHotkey, useMinimizeToTray, useSettingsActions } from "@/stores/settingsStore";
+import { useHotkey, useQuickViewHotkey, useMinimizeToTray, useSettingsActions } from "@/stores/settingsStore";
 import { HotkeyRecorder } from "./HotkeyRecorder";
 
 interface Shortcut {
   keys: string[];
   description: string;
 }
+
+const TIPS = [
+  "Paste text with lines starting with -, *, or [] into the task input to bulk-add multiple tasks at once.",
+  "Double-click a task to edit its text inline.",
+  "Right-click a task for quick actions: edit, copy, toggle, or delete.",
+  "Drag tasks by the handle to reorder them.",
+];
 
 const SHORTCUT_GROUPS: { label: string; shortcuts: Shortcut[] }[] = [
   {
@@ -47,6 +54,7 @@ function Kbd({ children, dimmed }: { children: string; dimmed?: boolean }) {
 
 export function ShortcutList() {
   const hotkey = useHotkey();
+  const quickViewHotkey = useQuickViewHotkey();
   const minimizeToTray = useMinimizeToTray();
   const actions = useSettingsActions();
 
@@ -69,11 +77,15 @@ export function ShortcutList() {
                 <span className="ml-2 text-[10px] text-on-surface-variant/30">(enable tray)</span>
               )}
             </span>
-            <div className="flex items-center gap-1">
-              {["Ctrl", "Shift", "Space"].map((key) => (
-                <Kbd key={key} dimmed={!minimizeToTray}>{key}</Kbd>
-              ))}
-            </div>
+            {minimizeToTray ? (
+              <HotkeyRecorder hotkey={quickViewHotkey} onChange={actions.setQuickViewHotkey} />
+            ) : (
+              <div className="flex items-center gap-1">
+                {quickViewHotkey.split("+").map((key) => (
+                  <Kbd key={key} dimmed>{key}</Kbd>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -102,6 +114,36 @@ export function ShortcutList() {
           </div>
         </div>
       ))}
+
+      {/* Tips */}
+      <div>
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/30">
+          Tips
+        </div>
+        <ul className="space-y-2">
+          {TIPS.map((tip) => (
+            <li key={tip} className="flex items-start gap-2 py-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="mt-0.5 shrink-0 text-on-surface-variant/40"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+              </svg>
+              <span className="text-sm text-on-surface-variant">{tip}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
