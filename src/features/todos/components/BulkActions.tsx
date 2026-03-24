@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { useProjectActions } from "@/stores/projectStore";
 import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
 
 interface BulkActionsProps {
   projectId: string;
   doneCount: number;
+  onDelete: () => void;
 }
 
-export function BulkActions({ projectId, doneCount }: BulkActionsProps) {
-  const actions = useProjectActions();
+export function BulkActions({ doneCount, onDelete }: BulkActionsProps) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   if (doneCount === 0) return null;
@@ -28,8 +27,8 @@ export function BulkActions({ projectId, doneCount }: BulkActionsProps) {
         message={`Delete ${doneCount} completed todo${doneCount === 1 ? "" : "s"}? This cannot be undone.`}
         confirmLabel="Delete"
         variant="destructive"
-        onConfirm={async () => {
-          await actions.bulkDeleteDone(projectId);
+        onConfirm={() => {
+          onDelete();
           setShowConfirm(false);
         }}
         onCancel={() => setShowConfirm(false)}
