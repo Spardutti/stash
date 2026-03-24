@@ -4,6 +4,14 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { Project } from "@/types";
 import { useProjectActions } from "@/stores/projectStore";
 import { exportProjectJson, slugify } from "@/services/storage";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
 
 interface ProjectItemProps {
@@ -42,8 +50,8 @@ export function ProjectItem({ project, isActive, onSelect }: ProjectItemProps) {
 
   if (isEditing) {
     return (
-      <div className="px-2 py-1">
-        <input
+      <div className="px-1">
+        <Input
           autoFocus
           value={editName}
           onChange={(e) => setEditName(e.target.value)}
@@ -55,7 +63,7 @@ export function ProjectItem({ project, isActive, onSelect }: ProjectItemProps) {
             }
           }}
           onBlur={handleRename}
-          className="w-full rounded bg-transparent border border-border/30 px-2 py-1.5 text-[0.75rem] text-foreground focus:border-tertiary focus:outline-none"
+          className="h-8 text-xs"
         />
       </div>
     );
@@ -67,50 +75,69 @@ export function ProjectItem({ project, isActive, onSelect }: ProjectItemProps) {
         role="button"
         tabIndex={0}
         onClick={onSelect}
-        onDoubleClick={() => {
-          setEditName(project.name);
-          setIsEditing(true);
-        }}
         onKeyDown={(e) => {
           if (e.key === "Enter") onSelect();
         }}
-        className={`group flex items-center justify-between rounded-lg px-2 py-2 text-[0.75rem] cursor-pointer transition-all ${
+        className={`group flex items-center justify-between px-3 py-2 text-[0.75rem] cursor-pointer transition-colors ${
           isActive
-            ? "bg-surface-high text-foreground font-medium border-l-2 border-primary"
-            : "text-on-surface-variant hover:text-foreground hover:bg-surface"
+            ? "bg-surface-high text-foreground font-semibold border-l-2 border-primary rounded-r-lg"
+            : "text-zinc-500 hover:text-zinc-300 hover:bg-surface-high/50 rounded-lg"
         }`}
       >
-        <span className="truncate">{project.name}</span>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleExport();
-            }}
-            className="hidden rounded p-0.5 text-on-surface-variant hover:text-foreground group-hover:block"
-            aria-label={`Export ${project.name}`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowDeleteConfirm(true);
-            }}
-            className="hidden rounded p-0.5 text-on-surface-variant hover:text-error group-hover:block"
-            aria-label={`Delete ${project.name}`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 6h18" />
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-            </svg>
-          </button>
+        <div className="flex items-center gap-3 min-w-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill={isActive ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
+          <span className="truncate">{project.name}</span>
         </div>
+
+        {/* Three-dot menu — visible on hover, no layout shift */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            className="opacity-0 group-hover:opacity-100 rounded p-1 text-zinc-600 hover:text-zinc-300 transition-opacity"
+            aria-label={`Actions for ${project.name}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="5" r="1" />
+              <circle cx="12" cy="12" r="1" />
+              <circle cx="12" cy="19" r="1" />
+            </svg>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={4}>
+            <DropdownMenuItem
+              onSelect={() => {
+                setEditName(project.name);
+                setIsEditing(true);
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              </svg>
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={handleExport}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={() => setShowDeleteConfirm(true)}
+              className="text-destructive focus:text-destructive"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <ConfirmDialog
