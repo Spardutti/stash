@@ -20,3 +20,6 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Temp debug screenshots
+image.png
