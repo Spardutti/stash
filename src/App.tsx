@@ -78,14 +78,19 @@ function MainApp() {
     const shortcut = toTauriShortcut(hotkey);
     let registered = true;
 
-    register(shortcut, (event) => {
-      if (event.state === "Pressed") {
-        openQuickAddWindow();
-      }
-    }).catch((err) => {
-      console.error("Failed to register global shortcut:", err);
-      registered = false;
-    });
+    unregister(shortcut)
+      .catch(() => {})
+      .then(() =>
+        register(shortcut, (event) => {
+          if (event.state === "Pressed") {
+            openQuickAddWindow();
+          }
+        }),
+      )
+      .catch((err) => {
+        console.error("Failed to register global shortcut:", err);
+        registered = false;
+      });
 
     return () => {
       if (registered) {

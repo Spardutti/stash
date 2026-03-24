@@ -10,8 +10,8 @@ export async function openQuickAddWindow(): Promise<void> {
   new WebviewWindow("quick-add", {
     url: "index.html?window=quick-add",
     title: "Quick Add",
-    width: 480,
-    height: 180,
+    width: 520,
+    height: 220,
     center: true,
     resizable: false,
     decorations: false,
