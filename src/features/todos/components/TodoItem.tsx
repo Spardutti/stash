@@ -131,13 +131,13 @@ export const TodoItem = memo(function TodoItem({
             exit={exitAnimation}
             transition={{ layout: layoutTransition }}
             style={{ overflow: "hidden" }}
-            className="task-row group flex items-center gap-3 px-2 py-2.5 cursor-pointer border-b border-border/5 transition-colors"
+            className="task-row group flex items-start gap-3 px-2 py-2.5 cursor-pointer border-b border-border/5 transition-colors"
           >
-            {sortable && (
+            {sortable ? (
               <button
                 {...attributes}
                 {...listeners}
-                className="cursor-grab touch-none text-on-surface-variant/30 hover:text-on-surface-variant"
+                className="mt-0.5 shrink-0 cursor-grab touch-none text-on-surface-variant/30 hover:text-on-surface-variant"
                 data-drag-handle
                 aria-label="Drag to reorder"
               >
@@ -150,10 +150,14 @@ export const TodoItem = memo(function TodoItem({
                   <circle cx="15" cy="19" r="1" />
                 </svg>
               </button>
+            ) : (
+              <span className="w-[14px] shrink-0" aria-hidden />
             )}
 
             {/* Animated checkbox */}
-            <AnimatedCheckbox checked={isChecked} onChange={handleToggle} />
+            <div className="mt-0.5 shrink-0">
+              <AnimatedCheckbox checked={isChecked} onChange={handleToggle} />
+            </div>
 
             {/* Text with animated strikethrough */}
             <span
@@ -161,7 +165,7 @@ export const TodoItem = memo(function TodoItem({
                 setEditText(todo.text);
                 setIsEditing(true);
               }}
-              className="relative flex-1 text-sm font-medium truncate cursor-pointer"
+              className="relative flex-1 text-sm font-medium break-words min-w-0 cursor-pointer"
             >
               <m.span
                 animate={{
@@ -183,7 +187,7 @@ export const TodoItem = memo(function TodoItem({
               />
             </span>
 
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="mt-0.5 flex shrink-0 items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={handleCopy}
                 className={`rounded p-1 transition-colors ${

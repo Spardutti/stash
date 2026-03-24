@@ -6,6 +6,7 @@ interface SettingsActions {
   initialize: () => Promise<void>;
   setTheme: (theme: "light" | "dark") => Promise<void>;
   setHotkey: (hotkey: string) => Promise<void>;
+  setQuickViewHotkey: (hotkey: string) => Promise<void>;
   setLastProjectId: (id: string | null) => Promise<void>;
   setMinimizeToTray: (enabled: boolean) => Promise<void>;
 }
@@ -18,6 +19,7 @@ interface SettingsState extends Settings {
 const useSettingsStore = create<SettingsState>()((set, get) => ({
   theme: "dark",
   hotkey: "Ctrl+Space",
+  quickViewHotkey: "Ctrl+Shift+Space",
   lastProjectId: null,
   minimizeToTray: true,
   initialized: false,
@@ -37,6 +39,11 @@ const useSettingsStore = create<SettingsState>()((set, get) => ({
 
     setHotkey: async (hotkey) => {
       set({ hotkey });
+      await persistSettings(get());
+    },
+
+    setQuickViewHotkey: async (hotkey) => {
+      set({ quickViewHotkey: hotkey });
       await persistSettings(get());
     },
 
@@ -64,6 +71,7 @@ function persistSettings(state: SettingsState): Promise<void> {
   return saveSettings({
     theme: state.theme,
     hotkey: state.hotkey,
+    quickViewHotkey: state.quickViewHotkey,
     lastProjectId: state.lastProjectId,
     minimizeToTray: state.minimizeToTray,
   });
@@ -72,6 +80,8 @@ function persistSettings(state: SettingsState): Promise<void> {
 // Exported custom hooks — never expose raw store
 export const useTheme = () => useSettingsStore((s) => s.theme);
 export const useHotkey = () => useSettingsStore((s) => s.hotkey);
+export const useQuickViewHotkey = () =>
+  useSettingsStore((s) => s.quickViewHotkey);
 export const useLastProjectId = () =>
   useSettingsStore((s) => s.lastProjectId);
 export const useMinimizeToTray = () =>

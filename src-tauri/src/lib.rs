@@ -1,4 +1,83 @@
 use tauri::Emitter;
+use tauri::tray::{TrayIconBuilder, TrayIconId};
+use tauri::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
+use tauri::Manager;
+
+fn handle_tray_menu_event(app: &tauri::AppHandle, event: MenuEvent) {
+    match event.id().as_ref() {
+        "open" => {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.set_focus();
+            }
+        }
+        "quick-add" => {
+            let _ = app.emit("tray-quick-add", ());
+        }
+        "quick-view" => {
+            let _ = app.emit("tray-quick-view", ());
+        }
+        "quit" => {
+            app.exit(0);
+        }
+        _ => {}
+    }
+}
+
+#[tauri::command]
+async fn create_tray(app: tauri::AppHandle) -> Result<(), String> {
+    // Don't recreate if it already exists
+    if app.tray_by_id(&TrayIconId::new("main-tray")).is_some() {
+        return Ok(());
+    }
+
+    let open_item = MenuItem::with_id(&app, "open", "Open Stash", true, None::<&str>)
+        .map_err(|e| e.to_string())?;
+    let quick_add_item = MenuItem::with_id(&app, "quick-add", "Quick Add", true, None::<&str>)
+        .map_err(|e| e.to_string())?;
+    let quick_view_item =
+        MenuItem::with_id(&app, "quick-view", "Quick View", true, None::<&str>)
+            .map_err(|e| e.to_string())?;
+    let separator = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
+    let separator2 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
+    let quit_item = MenuItem::with_id(&app, "quit", "Quit Stash", true, None::<&str>)
+        .map_err(|e| e.to_string())?;
+
+    let menu = Menu::with_items(
+        &app,
+        &[
+            &open_item,
+            &separator,
+            &quick_add_item,
+            &quick_view_item,
+            &separator2,
+            &quit_item,
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+
+    let mut builder = TrayIconBuilder::with_id("main-tray")
+        .menu(&menu)
+        .tooltip("Stash — Task Management")
+        .show_menu_on_left_click(true)
+        .on_menu_event(handle_tray_menu_event);
+
+    if let Some(icon) = app.default_window_icon() {
+        builder = builder.icon(icon.clone());
+    }
+
+    builder.build(&app).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn destroy_tray(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(tray) = app.tray_by_id(&TrayIconId::new("main-tray")) {
+        tray.set_visible(false).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -7,10 +86,10 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .invoke_handler(tauri::generate_handler![create_tray, destroy_tray])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
-                    // Prevent default close — let frontend decide hide vs quit
                     api.prevent_close();
                     let _ = window.emit("window-close-requested", ());
                 }

@@ -17,6 +17,7 @@ export interface Project {
 export interface Settings {
   theme: "light" | "dark";
   hotkey: string;
+  quickViewHotkey: string;
   lastProjectId: string | null;
   minimizeToTray: boolean;
 }

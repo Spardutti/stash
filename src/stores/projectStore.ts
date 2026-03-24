@@ -16,6 +16,7 @@ interface ProjectActions {
   renameProject: (id: string, name: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   addTodo: (projectId: string, text: string) => Promise<void>;
+  addTodos: (projectId: string, texts: string[]) => Promise<void>;
   editTodo: (projectId: string, todoId: string, text: string) => Promise<void>;
   deleteTodo: (projectId: string, todoId: string) => Promise<void>;
   toggleTodo: (projectId: string, todoId: string) => Promise<void>;
@@ -115,6 +116,38 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
       };
 
       const updated = { ...project, todos: [todo, ...project.todos] };
+      await saveProject(updated);
+      set((state) => ({
+        projects: state.projects.map((p) =>
+          p.id === projectId ? updated : p,
+        ),
+      }));
+    },
+
+    addTodos: async (projectId, texts) => {
+      if (texts.length === 0) return;
+      const project = get().projects.find((p) => p.id === projectId);
+      if (!project) return;
+
+      const maxOrder = project.todos.reduce(
+        (max, t) => (t.done ? max : Math.max(max, t.order)),
+        -1,
+      );
+
+      const now = new Date().toISOString();
+      const newTodos: Todo[] = texts.map((text, i) => ({
+        id: generateId(),
+        text,
+        done: false,
+        createdAt: now,
+        doneAt: null,
+        order: maxOrder + 1 + i,
+      }));
+
+      const updated = {
+        ...project,
+        todos: [...newTodos, ...project.todos],
+      };
       await saveProject(updated);
       set((state) => ({
         projects: state.projects.map((p) =>

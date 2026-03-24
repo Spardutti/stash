@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { emit } from "@tauri-apps/api/event";
 import type { Project, Todo } from "@/types";
@@ -12,6 +12,8 @@ export function QuickViewPopup() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loaded, setLoaded] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const inputRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
@@ -81,6 +83,7 @@ export function QuickViewPopup() {
     );
     await saveProject(updated);
     await emit("todo-added", { projectId: currentProject.id });
+    containerRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -118,7 +121,10 @@ export function QuickViewPopup() {
 
   return (
     <div
-      ref={inputRef}
+      ref={(node) => {
+        containerRef.current = node;
+        inputRef(node);
+      }}
       tabIndex={0}
       onKeyDown={handleKeyDown}
       className="flex h-full flex-col bg-surface-lowest border border-white/10 rounded-lg overflow-hidden outline-none"
@@ -166,16 +172,16 @@ export function QuickViewPopup() {
             {pendingTodos.map((todo) => (
               <li
                 key={todo.id}
-                className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+                className="flex items-start gap-3 px-4 py-2.5 border-b border-white/5 hover:bg-white/[0.02] transition-colors"
               >
                 <button
                   onClick={() => handleToggle(todo)}
-                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-border hover:border-tertiary transition-colors"
+                  className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-border hover:border-tertiary transition-colors"
                   aria-label="Mark as done"
                 >
                   {/* Empty — unchecked */}
                 </button>
-                <span className="text-sm font-medium text-foreground truncate">
+                <span className="text-sm font-medium text-foreground break-words min-w-0">
                   {todo.text}
                 </span>
               </li>

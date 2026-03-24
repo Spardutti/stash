@@ -191,14 +191,6 @@ export function TodoList({ project }: TodoListProps) {
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      {/* Top header bar */}
-      <header className="flex items-center justify-between h-10 px-4 bg-surface border-b border-border/15 shrink-0">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">
-          Active Workspaces / {project.name}
-        </span>
-        <TodoInput onAdd={(text) => actions.addTodo(project.id, text)} />
-      </header>
-
       {/* Dashboard canvas */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-5xl mx-auto">
@@ -246,6 +238,12 @@ export function TodoList({ project }: TodoListProps) {
               <TodoFilters />
             </div>
           </div>
+
+          {/* Task input */}
+          <TodoInput
+            onAdd={(text) => actions.addTodo(project.id, text)}
+            onAddMultiple={(texts) => actions.addTodos(project.id, texts)}
+          />
 
           {/* Task list */}
           {visibleTodos.length === 0 ? (
