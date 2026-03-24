@@ -249,6 +249,16 @@
   --sidebar-ring: #cde5ff;
 }
 
+/* Every clickable element gets the hand cursor */
+button,
+[role="button"],
+[type="checkbox"],
+[type="radio"],
+select,
+summary {
+  cursor: pointer;
+}
+
 /* height: 100% needed for Tauri's full-window layout */
 html,
 body,
