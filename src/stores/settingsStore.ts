@@ -7,6 +7,7 @@ interface SettingsActions {
   setTheme: (theme: "light" | "dark") => Promise<void>;
   setHotkey: (hotkey: string) => Promise<void>;
   setLastProjectId: (id: string | null) => Promise<void>;
+  setMinimizeToTray: (enabled: boolean) => Promise<void>;
 }
 
 interface SettingsState extends Settings {
@@ -18,6 +19,7 @@ const useSettingsStore = create<SettingsState>()((set, get) => ({
   theme: "dark",
   hotkey: "Ctrl+Shift+Space",
   lastProjectId: null,
+  minimizeToTray: true,
   initialized: false,
   actions: {
     initialize: async () => {
@@ -42,6 +44,11 @@ const useSettingsStore = create<SettingsState>()((set, get) => ({
       set({ lastProjectId: id });
       await persistSettings(get());
     },
+
+    setMinimizeToTray: async (enabled) => {
+      set({ minimizeToTray: enabled });
+      await persistSettings(get());
+    },
   },
 }));
 
@@ -58,6 +65,7 @@ function persistSettings(state: SettingsState): Promise<void> {
     theme: state.theme,
     hotkey: state.hotkey,
     lastProjectId: state.lastProjectId,
+    minimizeToTray: state.minimizeToTray,
   });
 }
 
@@ -66,6 +74,8 @@ export const useTheme = () => useSettingsStore((s) => s.theme);
 export const useHotkey = () => useSettingsStore((s) => s.hotkey);
 export const useLastProjectId = () =>
   useSettingsStore((s) => s.lastProjectId);
+export const useMinimizeToTray = () =>
+  useSettingsStore((s) => s.minimizeToTray);
 export const useSettingsInitialized = () =>
   useSettingsStore((s) => s.initialized);
 export const useSettingsActions = () => useSettingsStore((s) => s.actions);

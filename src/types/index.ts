@@ -18,6 +18,7 @@ export interface Settings {
   theme: "light" | "dark";
   hotkey: string;
   lastProjectId: string | null;
+  minimizeToTray: boolean;
 }
 
 export type TodoFilter = "all" | "pending" | "done";

@@ -1,4 +1,5 @@
-import { useHotkey } from "@/stores/settingsStore";
+import { useHotkey, useMinimizeToTray, useSettingsActions } from "@/stores/settingsStore";
+import { HotkeyRecorder } from "./HotkeyRecorder";
 
 interface Shortcut {
   keys: string[];
@@ -32,9 +33,13 @@ const SHORTCUT_GROUPS: { label: string; shortcuts: Shortcut[] }[] = [
   },
 ];
 
-function Kbd({ children }: { children: string }) {
+function Kbd({ children, dimmed }: { children: string; dimmed?: boolean }) {
   return (
-    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded bg-surface-high px-1.5 font-mono text-[10px] text-on-surface-variant">
+    <kbd
+      className={`inline-flex h-5 min-w-5 items-center justify-center rounded bg-surface-high px-1.5 font-mono text-[10px] ${
+        dimmed ? "text-on-surface-variant/30" : "text-on-surface-variant"
+      }`}
+    >
       {children}
     </kbd>
   );
@@ -42,20 +47,33 @@ function Kbd({ children }: { children: string }) {
 
 export function ShortcutList() {
   const hotkey = useHotkey();
+  const minimizeToTray = useMinimizeToTray();
+  const actions = useSettingsActions();
 
   return (
     <div className="space-y-6">
-      {/* Global hotkey — separate since it's user-configurable */}
+      {/* Global shortcuts (OS-wide) */}
       <div>
         <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/30">
           Global (OS-wide)
         </div>
-        <div className="flex items-center justify-between py-1.5">
-          <span className="text-sm text-foreground">Quick-add popup</span>
-          <div className="flex items-center gap-1">
-            {hotkey.split("+").map((key) => (
-              <Kbd key={key}>{key}</Kbd>
-            ))}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between py-1.5">
+            <span className="text-sm text-foreground">Quick-add popup</span>
+            <HotkeyRecorder hotkey={hotkey} onChange={actions.setHotkey} />
+          </div>
+          <div className="flex items-center justify-between py-1.5">
+            <span className={`text-sm ${minimizeToTray ? "text-foreground" : "text-on-surface-variant/30"}`}>
+              Quick view popup
+              {!minimizeToTray && (
+                <span className="ml-2 text-[10px] text-on-surface-variant/30">(enable tray)</span>
+              )}
+            </span>
+            <div className="flex items-center gap-1">
+              {["Ctrl", "Shift", "V"].map((key) => (
+                <Kbd key={key} dimmed={!minimizeToTray}>{key}</Kbd>
+              ))}
+            </div>
           </div>
         </div>
       </div>

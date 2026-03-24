@@ -1,19 +1,18 @@
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
-import { useTheme, useHotkey, useSettingsActions } from "@/stores/settingsStore";
+import { useTheme, useMinimizeToTray, useSettingsActions } from "@/stores/settingsStore";
 import { useProjects, useProjectActions } from "@/stores/projectStore";
 import {
   exportWorkspaceJson,
   importWorkspaceFromJson,
 } from "@/services/storage";
 import { Button } from "@/components/ui/button";
-import { HotkeyRecorder } from "./HotkeyRecorder";
 import { ThemeToggle } from "./ThemeToggle";
 import { ShortcutList } from "./ShortcutList";
 
 export function SettingsPage() {
   const theme = useTheme();
-  const hotkey = useHotkey();
+  const minimizeToTray = useMinimizeToTray();
   const actions = useSettingsActions();
   const projects = useProjects();
   const projectActions = useProjectActions();
@@ -58,9 +57,28 @@ export function SettingsPage() {
 
           <section>
             <h2 className="mb-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/50">
-              Global Hotkey
+              Behavior
             </h2>
-            <HotkeyRecorder hotkey={hotkey} onChange={actions.setHotkey} />
+            <label className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-foreground">Minimize to tray</p>
+                <p className="text-xs text-on-surface-variant/60">
+                  Close button hides the window to system tray instead of quitting
+                </p>
+              </div>
+              <button
+                onClick={() => actions.setMinimizeToTray(!minimizeToTray)}
+                className={`relative h-5 w-9 rounded-full transition-colors ${
+                  minimizeToTray ? "bg-tertiary" : "bg-surface-high"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-foreground transition-transform ${
+                    minimizeToTray ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </label>
           </section>
 
           <section>

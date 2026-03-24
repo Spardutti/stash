@@ -17,6 +17,7 @@ const DEFAULT_SETTINGS: Settings = {
   theme: "dark",
   hotkey: "Ctrl+Shift+Space",
   lastProjectId: null,
+  minimizeToTray: true,
 };
 
 export async function ensureDataDir(): Promise<void> {
@@ -37,7 +38,8 @@ export async function loadSettings(): Promise<Settings> {
   if (!isSettings(parsed)) {
     return { ...DEFAULT_SETTINGS };
   }
-  return parsed;
+  // Merge with defaults so new fields get their default values
+  return { ...DEFAULT_SETTINGS, ...parsed };
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
