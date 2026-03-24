@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence } from "motion/react";
 import {
   DndContext,
   closestCenter,
@@ -248,7 +249,7 @@ export function TodoList({ project }: TodoListProps) {
                 items={pendingIds}
                 strategy={verticalListSortingStrategy}
               >
-                <ul className="space-y-px">
+                <AnimatePresence mode="popLayout" initial={false}>
                   {visibleTodos.map((todo) => (
                     <TodoItem
                       key={todo.id}
@@ -257,7 +258,7 @@ export function TodoList({ project }: TodoListProps) {
                       sortable={!todo.done}
                     />
                   ))}
-                </ul>
+                </AnimatePresence>
               </SortableContext>
               {/* Always mounted — children conditional */}
               <DragOverlay dropAnimation={dropAnimation}>
