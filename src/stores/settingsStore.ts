@@ -17,7 +17,7 @@ interface SettingsState extends Settings {
 
 const useSettingsStore = create<SettingsState>()((set, get) => ({
   theme: "dark",
-  hotkey: "Ctrl+Shift+Space",
+  hotkey: "Ctrl+Space",
   lastProjectId: null,
   minimizeToTray: true,
   initialized: false,

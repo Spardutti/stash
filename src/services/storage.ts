@@ -15,7 +15,7 @@ const SETTINGS_FILE = "settings.json";
 
 const DEFAULT_SETTINGS: Settings = {
   theme: "dark",
-  hotkey: "Ctrl+Shift+Space",
+  hotkey: "Ctrl+Space",
   lastProjectId: null,
   minimizeToTray: true,
 };

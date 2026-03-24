@@ -70,7 +70,7 @@ export function ShortcutList() {
               )}
             </span>
             <div className="flex items-center gap-1">
-              {["Ctrl", "Shift", "V"].map((key) => (
+              {["Ctrl", "Shift", "Space"].map((key) => (
                 <Kbd key={key} dimmed={!minimizeToTray}>{key}</Kbd>
               ))}
             </div>
