@@ -77,9 +77,13 @@ export function QuickAddPopup() {
     };
 
     const updated = { ...project, todos: [todo, ...project.todos] };
+    // Update local project list so next add uses correct order
+    setProjects((prev) =>
+      prev.map((p) => (p.id === project.id ? updated : p)),
+    );
     await saveProject(updated);
     await emit("todo-added", { projectId: project.id });
-    await getCurrentWindow().close();
+    setText("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
