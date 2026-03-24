@@ -36,7 +36,7 @@ function toTauriShortcut(hotkey: string): string {
     .join("+");
 }
 
-const QUICK_VIEW_SHORTCUT = "Control+Shift+V";
+const QUICK_VIEW_SHORTCUT = "Control+Shift+Space";
 
 let didInit = false;
 
