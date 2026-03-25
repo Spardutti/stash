@@ -101,9 +101,9 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
       const project = get().projects.find((p) => p.id === projectId);
       if (!project) return;
 
-      const maxOrder = project.todos.reduce(
-        (max, t) => (t.done ? max : Math.max(max, t.order)),
-        -1,
+      // Shift existing pending todos down by 1 to make room at the top
+      const shiftedTodos = project.todos.map((t) =>
+        t.done ? t : { ...t, order: t.order + 1 },
       );
 
       const todo: Todo = {
@@ -112,10 +112,10 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
         done: false,
         createdAt: new Date().toISOString(),
         doneAt: null,
-        order: maxOrder + 1,
+        order: 0,
       };
 
-      const updated = { ...project, todos: [todo, ...project.todos] };
+      const updated = { ...project, todos: [todo, ...shiftedTodos] };
       await saveProject(updated);
       set((state) => ({
         projects: state.projects.map((p) =>
@@ -129,9 +129,9 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
       const project = get().projects.find((p) => p.id === projectId);
       if (!project) return;
 
-      const maxOrder = project.todos.reduce(
-        (max, t) => (t.done ? max : Math.max(max, t.order)),
-        -1,
+      // Shift existing pending todos down to make room at the top
+      const shiftedTodos = project.todos.map((t) =>
+        t.done ? t : { ...t, order: t.order + texts.length },
       );
 
       const now = new Date().toISOString();
@@ -141,12 +141,12 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
         done: false,
         createdAt: now,
         doneAt: null,
-        order: maxOrder + 1 + i,
+        order: i,
       }));
 
       const updated = {
         ...project,
-        todos: [...newTodos, ...project.todos],
+        todos: [...newTodos, ...shiftedTodos],
       };
       await saveProject(updated);
       set((state) => ({
