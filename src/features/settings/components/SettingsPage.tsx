@@ -39,15 +39,19 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex items-center h-10 px-4 bg-surface border-b border-border/15 shrink-0">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">
-          Settings
-        </span>
-      </header>
-
+    <div className="flex flex-1 min-h-0 flex-col">
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-lg space-y-8">
+        <div className="max-w-5xl mx-auto">
+          {/* Page header */}
+          <div className="flex items-end justify-between mb-8 border-b border-border/10 pb-4">
+            <div>
+              <h1 className="text-[2.25rem] font-bold tracking-tighter leading-none mb-2 text-foreground">
+                Settings
+              </h1>
+            </div>
+          </div>
+
+          <div className="space-y-8">
           <section>
             <h2 className="mb-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/50">
               Appearance
@@ -111,6 +115,7 @@ export function SettingsPage() {
               </Button>
             </div>
           </section>
+          </div>
         </div>
       </div>
     </div>
