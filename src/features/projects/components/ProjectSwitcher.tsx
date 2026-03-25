@@ -7,9 +7,10 @@ import { useSettingsActions } from "@/stores/settingsStore";
 interface ProjectSwitcherProps {
   open: boolean;
   onClose: () => void;
+  onSelect?: () => void;
 }
 
-export function ProjectSwitcher({ open, onClose }: ProjectSwitcherProps) {
+export function ProjectSwitcher({ open, onClose, onSelect }: ProjectSwitcherProps) {
   const projects = useProjects();
   const projectActions = useProjectActions();
   const settingsActions = useSettingsActions();
@@ -36,7 +37,7 @@ export function ProjectSwitcher({ open, onClose }: ProjectSwitcherProps) {
   const handleSelect = (project: Project) => {
     projectActions.setActiveProject(project.id);
     settingsActions.setLastProjectId(project.id);
-    onClose();
+    onSelect ? onSelect() : onClose();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

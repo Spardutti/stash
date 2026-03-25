@@ -149,6 +149,10 @@ export function MainLayout() {
       <ProjectSwitcher
         open={showSwitcher}
         onClose={() => setShowSwitcher(false)}
+        onSelect={() => {
+          setShowSwitcher(false);
+          setView("project");
+        }}
       />
     </LazyMotion>
   );

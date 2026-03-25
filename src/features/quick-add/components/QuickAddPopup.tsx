@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { emit } from "@tauri-apps/api/event";
 import type { Project } from "@/types";
 import {
   loadAllProjects,
   loadSettings,
+  saveSettings,
   saveProject,
   generateId,
 } from "@/services/storage";
+import type { Settings } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -16,6 +18,14 @@ export function QuickAddPopup() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [text, setText] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const settingsRef = useRef<Settings | null>(null);
+
+  const persistActiveProject = useCallback((projectId: string) => {
+    if (!settingsRef.current) return;
+    settingsRef.current = { ...settingsRef.current, lastProjectId: projectId };
+    saveSettings(settingsRef.current);
+  }, []);
+
   const inputRef = useCallback((node: HTMLInputElement | null) => {
     if (node) {
       // Tauri windows need time to gain OS focus before input focus works
@@ -40,6 +50,7 @@ export function QuickAddPopup() {
         document.documentElement.classList.remove("dark");
       }
 
+      settingsRef.current = settings;
       setProjects(allProjects);
       setLoaded(true);
 
@@ -62,9 +73,9 @@ export function QuickAddPopup() {
     const project = projects[selectedIndex];
     if (!trimmed || !project) return;
 
-    const maxOrder = project.todos.reduce(
-      (max, t) => (t.done ? max : Math.max(max, t.order)),
-      -1,
+    // Shift existing pending todos down to make room at the top
+    const shiftedTodos = project.todos.map((t) =>
+      t.done ? t : { ...t, order: t.order + 1 },
     );
 
     const todo = {
@@ -73,18 +84,28 @@ export function QuickAddPopup() {
       done: false,
       createdAt: new Date().toISOString(),
       doneAt: null,
-      order: maxOrder + 1,
+      order: 0,
     };
 
-    const updated = { ...project, todos: [todo, ...project.todos] };
+    const updated = { ...project, todos: [todo, ...shiftedTodos] };
     // Update local project list so next add uses correct order
     setProjects((prev) =>
       prev.map((p) => (p.id === project.id ? updated : p)),
     );
     await saveProject(updated);
     await emit("todo-added", { projectId: project.id });
+    persistActiveProject(project.id);
     setText("");
   };
+
+  const switchProject = useCallback(
+    (nextIndex: number) => {
+      setSelectedIndex(nextIndex);
+      const project = projects[nextIndex];
+      if (project) persistActiveProject(project.id);
+    },
+    [projects, persistActiveProject],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -95,11 +116,10 @@ export function QuickAddPopup() {
     } else if (e.key === "Tab") {
       e.preventDefault();
       if (projects.length > 0) {
-        setSelectedIndex((prev) =>
-          e.shiftKey
-            ? (prev - 1 + projects.length) % projects.length
-            : (prev + 1) % projects.length,
-        );
+        const next = e.shiftKey
+          ? (selectedIndex - 1 + projects.length) % projects.length
+          : (selectedIndex + 1) % projects.length;
+        switchProject(next);
       }
     }
   };
@@ -136,7 +156,7 @@ export function QuickAddPopup() {
           variant="secondary"
           size="sm"
           onClick={() =>
-            setSelectedIndex((prev) => (prev + 1) % projects.length)
+            switchProject((selectedIndex + 1) % projects.length)
           }
           tabIndex={-1}
         >
