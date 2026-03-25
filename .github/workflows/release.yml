@@ -15,11 +15,19 @@ jobs:
         include:
           - platform: windows-latest
             args: ""
+          - platform: ubuntu-22.04
+            args: ""
     runs-on: ${{ matrix.platform }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 
       - name: Setup Node
         uses: actions/setup-node@v4
