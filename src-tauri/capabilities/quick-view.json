@@ -5,6 +5,9 @@
     "core:default",
     "core:window:allow-close",
     "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "core:window:allow-get-all-windows",
     "core:event:allow-emit",
     "fs:allow-appdata-read-recursive",
     "fs:allow-appdata-write-recursive"

@@ -1,17 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { emit } from "@tauri-apps/api/event";
 import type { Project, Todo } from "@/types";
 import {
   loadAllProjects,
   loadSettings,
+  saveSettings,
   saveProject,
 } from "@/services/storage";
+import type { Settings } from "@/types";
 
 export function QuickViewPopup() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const settingsRef = useRef<Settings | null>(null);
+
+  const persistActiveProject = useCallback((projectId: string) => {
+    if (!settingsRef.current) return;
+    settingsRef.current = { ...settingsRef.current, lastProjectId: projectId };
+    saveSettings(settingsRef.current);
+  }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -37,6 +47,7 @@ export function QuickViewPopup() {
         document.documentElement.classList.remove("dark");
       }
 
+      settingsRef.current = settings;
       setProjects(allProjects);
       setLoaded(true);
 
@@ -83,8 +94,27 @@ export function QuickViewPopup() {
     );
     await saveProject(updated);
     await emit("todo-added", { projectId: currentProject.id });
+    persistActiveProject(currentProject.id);
     containerRef.current?.focus();
   };
+
+  const handleOpenFullView = async () => {
+    const main = await WebviewWindow.getByLabel("main");
+    if (main) {
+      await main.show();
+      await main.setFocus();
+    }
+    await getCurrentWindow().close();
+  };
+
+  const switchProject = useCallback(
+    (nextIndex: number) => {
+      setSelectedIndex(nextIndex);
+      const project = projects[nextIndex];
+      if (project) persistActiveProject(project.id);
+    },
+    [projects, persistActiveProject],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -92,11 +122,10 @@ export function QuickViewPopup() {
     } else if (e.key === "Tab") {
       e.preventDefault();
       if (projects.length > 0) {
-        setSelectedIndex((prev) =>
-          e.shiftKey
-            ? (prev - 1 + projects.length) % projects.length
-            : (prev + 1) % projects.length,
-        );
+        const next = e.shiftKey
+          ? (selectedIndex - 1 + projects.length) % projects.length
+          : (selectedIndex + 1) % projects.length;
+        switchProject(next);
       }
     }
   };
@@ -137,7 +166,7 @@ export function QuickViewPopup() {
           </span>
           <button
             onClick={() =>
-              setSelectedIndex((prev) => (prev + 1) % projects.length)
+              switchProject((selectedIndex + 1) % projects.length)
             }
             className="rounded bg-surface-high px-2 py-0.5 text-xs font-medium text-secondary hover:opacity-80 transition-opacity"
           >
@@ -147,16 +176,30 @@ export function QuickViewPopup() {
             Tab to switch
           </span>
         </div>
-        <button
-          onClick={() => getCurrentWindow().close()}
-          className="rounded p-1 text-on-surface-variant/40 hover:text-foreground transition-colors"
-          aria-label="Close"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleOpenFullView}
+            className="rounded p-1 text-on-surface-variant/40 hover:text-foreground transition-colors"
+            aria-label="Open full view"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 3 21 3 21 9" />
+              <polyline points="9 21 3 21 3 15" />
+              <line x1="21" y1="3" x2="14" y2="10" />
+              <line x1="3" y1="21" x2="10" y2="14" />
+            </svg>
+          </button>
+          <button
+            onClick={() => getCurrentWindow().close()}
+            className="rounded p-1 text-on-surface-variant/40 hover:text-foreground transition-colors"
+            aria-label="Close"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Todo list */}
