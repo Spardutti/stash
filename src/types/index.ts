@@ -20,6 +20,7 @@ export interface Settings {
   quickViewHotkey: string;
   lastProjectId: string | null;
   minimizeToTray: boolean;
+  startWithSystem: boolean;
 }
 
 export type TodoFilter = "all" | "pending" | "done";

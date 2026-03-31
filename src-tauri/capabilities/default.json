@@ -18,6 +18,9 @@
     "core:menu:default",
     "core:window:allow-show",
     "core:window:allow-hide",
-    "process:allow-exit"
+    "process:allow-exit",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled"
   ]
 }

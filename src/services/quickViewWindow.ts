@@ -3,7 +3,7 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 export async function openQuickViewWindow(): Promise<void> {
   const existing = await WebviewWindow.getByLabel("quick-view");
   if (existing) {
-    await existing.setFocus();
+    await existing.close();
     return;
   }
 

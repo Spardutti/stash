@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { enable, disable } from "@tauri-apps/plugin-autostart";
 import type { Settings } from "@/types";
 import { loadSettings, saveSettings, ensureDataDir } from "@/services/storage";
 
@@ -9,6 +10,7 @@ interface SettingsActions {
   setQuickViewHotkey: (hotkey: string) => Promise<void>;
   setLastProjectId: (id: string | null) => Promise<void>;
   setMinimizeToTray: (enabled: boolean) => Promise<void>;
+  setStartWithSystem: (enabled: boolean) => Promise<void>;
 }
 
 interface SettingsState extends Settings {
@@ -22,6 +24,7 @@ const useSettingsStore = create<SettingsState>()((set, get) => ({
   quickViewHotkey: "Ctrl+Shift+Space",
   lastProjectId: null,
   minimizeToTray: true,
+  startWithSystem: false,
   initialized: false,
   actions: {
     initialize: async () => {
@@ -56,6 +59,20 @@ const useSettingsStore = create<SettingsState>()((set, get) => ({
       set({ minimizeToTray: enabled });
       await persistSettings(get());
     },
+
+    setStartWithSystem: async (enabled) => {
+      try {
+        if (enabled) {
+          await enable();
+        } else {
+          await disable();
+        }
+      } catch (err) {
+        console.error("Failed to toggle autostart:", err);
+      }
+      set({ startWithSystem: enabled });
+      await persistSettings(get());
+    },
   },
 }));
 
@@ -74,6 +91,7 @@ function persistSettings(state: SettingsState): Promise<void> {
     quickViewHotkey: state.quickViewHotkey,
     lastProjectId: state.lastProjectId,
     minimizeToTray: state.minimizeToTray,
+    startWithSystem: state.startWithSystem,
   });
 }
 
@@ -86,6 +104,8 @@ export const useLastProjectId = () =>
   useSettingsStore((s) => s.lastProjectId);
 export const useMinimizeToTray = () =>
   useSettingsStore((s) => s.minimizeToTray);
+export const useStartWithSystem = () =>
+  useSettingsStore((s) => s.startWithSystem);
 export const useSettingsInitialized = () =>
   useSettingsStore((s) => s.initialized);
 export const useSettingsActions = () => useSettingsStore((s) => s.actions);

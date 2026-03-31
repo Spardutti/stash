@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS: Settings = {
   quickViewHotkey: "Ctrl+Shift+Space",
   lastProjectId: null,
   minimizeToTray: true,
+  startWithSystem: false,
 };
 
 export async function ensureDataDir(): Promise<void> {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface HotkeyRecorderProps {
   hotkey: string;
@@ -7,6 +7,13 @@ interface HotkeyRecorderProps {
 
 export function HotkeyRecorder({ hotkey, onChange }: HotkeyRecorderProps) {
   const [recording, setRecording] = useState(false);
+  const recorderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (recording) {
+      recorderRef.current?.focus();
+    }
+  }, [recording]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!recording) return;
@@ -29,6 +36,7 @@ export function HotkeyRecorder({ hotkey, onChange }: HotkeyRecorderProps) {
   return (
     <div className="flex items-center gap-2">
       <div
+        ref={recorderRef}
         tabIndex={0}
         onKeyDown={handleKeyDown}
         onBlur={() => setRecording(false)}
