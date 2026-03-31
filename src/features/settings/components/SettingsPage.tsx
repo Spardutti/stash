@@ -1,6 +1,6 @@
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
-import { useTheme, useMinimizeToTray, useSettingsActions } from "@/stores/settingsStore";
+import { useTheme, useMinimizeToTray, useStartWithSystem, useSettingsActions } from "@/stores/settingsStore";
 import { useProjects, useProjectActions } from "@/stores/projectStore";
 import {
   exportWorkspaceJson,
@@ -13,6 +13,7 @@ import { ShortcutList } from "./ShortcutList";
 export function SettingsPage() {
   const theme = useTheme();
   const minimizeToTray = useMinimizeToTray();
+  const startWithSystem = useStartWithSystem();
   const actions = useSettingsActions();
   const projects = useProjects();
   const projectActions = useProjectActions();
@@ -63,6 +64,7 @@ export function SettingsPage() {
             <h2 className="mb-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/50">
               Behavior
             </h2>
+            <div className="space-y-4">
             <label className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-foreground">Minimize to tray</p>
@@ -83,6 +85,27 @@ export function SettingsPage() {
                 />
               </button>
             </label>
+            <label className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-foreground">Start with system</p>
+                <p className="text-xs text-on-surface-variant/60">
+                  Launch Stash in the tray when your system starts
+                </p>
+              </div>
+              <button
+                onClick={() => actions.setStartWithSystem(!startWithSystem)}
+                className={`relative h-5 w-9 rounded-full transition-colors ${
+                  startWithSystem ? "bg-tertiary" : "bg-surface-high"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-foreground transition-transform ${
+                    startWithSystem ? "translate-x-4" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </label>
+            </div>
           </section>
 
           <section>

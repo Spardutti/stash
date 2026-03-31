@@ -86,7 +86,21 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
         .invoke_handler(tauri::generate_handler![create_tray, destroy_tray])
+        .setup(|app| {
+            // If launched with --minimized (autostart), hide the main window
+            let args: Vec<String> = std::env::args().collect();
+            if args.iter().any(|a| a == "--minimized") {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.hide();
+                }
+            }
+            Ok(())
+        })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
