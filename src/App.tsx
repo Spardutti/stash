@@ -4,16 +4,20 @@ import {
   register,
   unregister,
 } from "@tauri-apps/plugin-global-shortcut";
-import { useProjectActions } from "@/stores/projectStore";
+import { useProjectActions, getProjects } from "@/stores/projectStore";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { exit } from "@tauri-apps/plugin-process";
 import {
   useHotkey,
   useQuickViewHotkey,
   useMinimizeToTray,
+  useGithubToken,
+  useGistId,
   useSettingsActions,
   useSettingsInitialized,
 } from "@/stores/settingsStore";
+import { downloadFromGist, uploadToGist } from "@/services/gistSync";
+import { importWorkspaceFromJson } from "@/services/storage";
 import { openQuickAddWindow } from "@/services/quickAddWindow";
 import { openQuickViewWindow } from "@/services/quickViewWindow";
 import { initTray } from "@/services/tray";
@@ -46,6 +50,8 @@ function MainApp() {
   const hotkey = useHotkey();
   const quickViewHotkey = useQuickViewHotkey();
   const minimizeToTray = useMinimizeToTray();
+  const githubToken = useGithubToken();
+  const gistId = useGistId();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -71,6 +77,29 @@ function MainApp() {
     init();
   }, [projectActions, settingsActions]);
 
+  // Auto-download from Gist on launch (if configured and Gist is newer)
+  useEffect(() => {
+    if (!initialized || !githubToken || !gistId) return;
+
+    (async () => {
+      try {
+        const { projects, syncedAt } = await downloadFromGist(githubToken, gistId);
+        const lastSynced = localStorage.getItem("stash_lastSyncedAt");
+        if (!lastSynced || syncedAt > lastSynced) {
+          const json = JSON.stringify({ version: 1, projects });
+          await importWorkspaceFromJson(json, "replace");
+          await projectActions.initialize();
+          localStorage.setItem("stash_lastSyncedAt", syncedAt);
+          console.log("[sync] Auto-downloaded from Gist");
+        } else {
+          console.log("[sync] Local is up to date");
+        }
+      } catch (e) {
+        console.error("[sync] Auto-download failed:", e);
+      }
+    })();
+  }, [initialized, githubToken, gistId, projectActions]);
+
   // Init system tray when enabled
   useEffect(() => {
     if (!initialized || !minimizeToTray) return;
@@ -79,9 +108,22 @@ function MainApp() {
     );
   }, [initialized, minimizeToTray]);
 
-  // Handle window close — hide to tray or quit based on setting
+  // Auto-upload helper
+  async function autoUpload() {
+    if (!githubToken || !gistId) return;
+    try {
+      await uploadToGist(githubToken, gistId, getProjects());
+      localStorage.setItem("stash_lastSyncedAt", new Date().toISOString());
+      console.log("[sync] Auto-uploaded");
+    } catch (e) {
+      console.error("[sync] Auto-upload failed:", e);
+    }
+  }
+
+  // Handle window close — auto-upload, then hide to tray or quit
   useEffect(() => {
     const unlisten = listen("window-close-requested", async () => {
+      await autoUpload();
       if (minimizeToTray) {
         await getCurrentWindow().hide();
       } else {
@@ -91,7 +133,18 @@ function MainApp() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [minimizeToTray]);
+  }, [minimizeToTray, githubToken, gistId]);
+
+  // Handle tray "Quit" — auto-upload, then exit
+  useEffect(() => {
+    const unlisten = listen("tray-quit-requested", async () => {
+      await autoUpload();
+      await exit(0);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [githubToken, gistId]);
 
   // Listen for todos added from quick-add or quick-view windows
   useEffect(() => {

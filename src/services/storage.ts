@@ -20,6 +20,10 @@ const DEFAULT_SETTINGS: Settings = {
   lastProjectId: null,
   minimizeToTray: true,
   startWithSystem: false,
+  githubToken: null,
+  gistId: null,
+  lastSyncedAt: null,
+  fontSize: "small",
 };
 
 export async function ensureDataDir(): Promise<void> {

@@ -21,6 +21,12 @@
     "process:allow-exit",
     "autostart:allow-enable",
     "autostart:allow-disable",
-    "autostart:allow-is-enabled"
+    "autostart:allow-is-enabled",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://api.github.com/**" }
+      ]
+    }
   ]
 }

@@ -260,6 +260,9 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
   },
 }));
 
+// Non-hook accessor for use outside React (e.g. window close handler)
+export const getProjects = () => useProjectStore.getState().projects;
+
 // Exported custom hooks — never expose raw store
 export const useProjects = () => useProjectStore((s) => s.projects);
 export const useActiveProjectId = () =>
