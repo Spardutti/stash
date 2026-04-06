@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Stash</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface-lowest: #0e0e0e;
+      --surface: #131313;
+      --surface-low: #1c1b1b;
+      --surface-high: #2a2a2a;
+      --surface-highest: #353534;
+      --foreground: #e5e2e1;
+      --on-surface-variant: #c6c6c6;
+      --outline-variant: #474747;
+      --tertiary: #cde5ff;
+      --error: #ffb4ab;
+      --font: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+    }
+
+    html, body, #app {
+      height: 100%; max-height: 100%; font-family: var(--font);
+      background: var(--bg); color: var(--foreground);
+      overflow: hidden; position: fixed; width: 100%;
+    }
+    body { display: flex; flex-direction: column; top: 0; left: 0; }
+
+    /* ── Setup screen ── */
+    .setup {
+      height: 100%; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 24px; gap: 16px;
+    }
+    .setup h1 { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.05em; }
+    .setup p {
+      font-size: 0.75rem; color: var(--on-surface-variant);
+      text-align: center; max-width: 300px; line-height: 1.5;
+    }
+    .setup input {
+      width: 100%; max-width: 360px; height: 44px; border-radius: 4px;
+      border: 1px solid var(--outline-variant); background: var(--surface);
+      color: var(--foreground); padding: 0 12px; font-size: 16px; outline: none;
+    }
+    .setup input:focus { border-color: var(--tertiary); }
+    .setup input::placeholder { color: rgba(198,198,198,0.4); }
+
+    /* ── Buttons ── */
+    .btn {
+      height: 36px; padding: 0 14px; border-radius: 4px;
+      border: 1px solid var(--outline-variant);
+      background: var(--surface); color: var(--foreground);
+      font-size: 0.8rem; font-weight: 500; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: background 0.15s; -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { background: var(--surface-high); }
+    .btn:disabled { opacity: 0.4; pointer-events: none; }
+    .btn-primary { background: var(--foreground); color: var(--bg); border-color: transparent; }
+    .btn-primary:active { background: var(--on-surface-variant); }
+    .btn-sm { height: 32px; padding: 0 10px; font-size: 0.75rem; }
+    .btn-row { display: flex; gap: 8px; width: 100%; max-width: 360px; }
+    .btn-row .btn { flex: 1; justify-content: center; }
+
+    /* ── App shell — full height flex column ── */
+    .app {
+      display: flex; flex-direction: column;
+      height: 100%; overflow: hidden;
+    }
+
+    /* Header — fixed top */
+    .header {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; background: var(--surface-lowest);
+      border-bottom: 1px solid rgba(71,71,71,0.15);
+    }
+    .header h1 { font-size: 0.875rem; font-weight: 700; letter-spacing: -0.02em; }
+    .header-actions { display: flex; gap: 6px; }
+
+    /* Project tabs — fixed, scrollable horizontally */
+    .tabs {
+      flex-shrink: 0;
+      display: flex; gap: 0; overflow-x: auto; background: var(--surface-lowest);
+      border-bottom: 1px solid rgba(71,71,71,0.15); padding: 0 12px;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      padding: 10px 14px; font-size: 0.6875rem; font-weight: 500;
+      color: var(--on-surface-variant); cursor: pointer; white-space: nowrap;
+      border-bottom: 2px solid transparent; text-transform: uppercase;
+      letter-spacing: 0.05em; transition: color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab.active { color: var(--foreground); border-bottom-color: var(--tertiary); }
+
+    /* Filter tabs — fixed */
+    .filters {
+      flex-shrink: 0;
+      display: flex; gap: 0; padding: 0 16px; background: var(--surface);
+      border-bottom: 1px solid rgba(71,71,71,0.08);
+    }
+    .filter-btn {
+      padding: 8px 10px; font-size: 0.625rem; font-weight: 600;
+      color: var(--on-surface-variant); cursor: pointer;
+      border: none; background: none; text-transform: uppercase;
+      letter-spacing: 0.08em; opacity: 0.5; transition: opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .filter-btn.active { opacity: 1; color: var(--tertiary); }
+
+    /* Todo list — THIS is the scrollable area */
+    .todo-list {
+      flex: 1; overflow-y: auto; padding: 4px 0;
+      -webkit-overflow-scrolling: touch;
+    }
+    .todo-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(71,71,71,0.08);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .checkbox {
+      width: 20px; height: 20px; min-width: 20px; border-radius: 3px;
+      border: 1.5px solid var(--outline-variant);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.15s; margin-top: 1px;
+    }
+    .checkbox.checked { background: var(--tertiary); border-color: var(--tertiary); }
+    .checkbox.checked::after {
+      content: ''; width: 9px; height: 5px;
+      border-left: 2px solid var(--bg);
+      border-bottom: 2px solid var(--bg);
+      transform: rotate(-45deg) translateY(-1px);
+    }
+
+    .todo-text {
+      font-size: 0.85rem; line-height: 1.5; flex: 1;
+      word-break: break-word; padding-top: 1px;
+    }
+    .todo-text.done { text-decoration: line-through; opacity: 0.35; }
+
+    .delete-btn {
+      width: 28px; height: 28px; min-width: 28px; border: none;
+      background: none; color: var(--on-surface-variant);
+      opacity: 0.25; cursor: pointer; font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px; -webkit-tap-highlight-color: transparent;
+    }
+    .delete-btn:active { opacity: 1; color: var(--error); background: rgba(255,180,171,0.1); }
+
+    /* Empty state — fills the scrollable area */
+    .empty {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: var(--on-surface-variant); opacity: 0.4; gap: 8px;
+    }
+    .empty-icon { font-size: 2rem; }
+    .empty p { font-size: 0.75rem; }
+
+    /* Add bar — pinned above todo list */
+    .add-bar {
+      flex-shrink: 0;
+      display: flex; gap: 8px; padding: 10px 16px;
+      background: var(--surface-lowest);
+      border-bottom: 1px solid rgba(71,71,71,0.15);
+    }
+    .add-bar input {
+      flex: 1; height: 40px; border-radius: 4px;
+      border: 1px solid var(--outline-variant);
+      background: var(--surface); color: var(--foreground);
+      padding: 0 12px; font-size: 16px; outline: none;
+    }
+    .add-bar input:focus { border-color: var(--tertiary); }
+    .add-bar input::placeholder { color: rgba(198,198,198,0.4); }
+
+    /* Status bar — pinned at very bottom */
+    .status-bar {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 12px; height: 24px; background: var(--surface-lowest);
+      border-top: 1px solid rgba(71,71,71,0.15);
+      font-family: var(--mono); font-size: 0.625rem;
+      color: rgba(198,198,198,0.6);
+    }
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--tertiary);
+      box-shadow: 0 0 8px rgba(205,229,255,0.4);
+      display: inline-block; margin-right: 6px;
+    }
+    .status-dot.unsaved {
+      background: var(--error);
+      box-shadow: 0 0 8px rgba(255,180,171,0.4);
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed; bottom: 36px; left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 16px; border-radius: 4px;
+      font-size: 0.75rem; font-weight: 500;
+      background: var(--surface-highest); color: var(--foreground);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4); z-index: 10;
+      animation: fadeIn 0.15s ease-out;
+    }
+    .toast.error { color: var(--error); }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    }
+
+    /* Dirty dot on upload button */
+    .btn-dirty { position: relative; }
+    .btn-dirty::after {
+      content: ''; position: absolute; top: 4px; right: 4px;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--error); box-shadow: 0 0 6px rgba(255,180,171,0.5);
+    }
+
+    /* Syncing spinner */
+    .syncing-indicator {
+      display: inline-block; width: 12px; height: 12px;
+      border: 2px solid var(--outline-variant);
+      border-top-color: var(--tertiary);
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    const GITHUB_API = "https://api.github.com";
+    const GIST_FILENAME = "stash-data.json";
+    const $ = (s) => document.querySelector(s);
+    const app = document.getElementById("app");
+
+    // ── State ──
+    let state = {
+      token: localStorage.getItem("stash_token") || "",
+      gistId: localStorage.getItem("stash_gist_id") || "",
+      projects: JSON.parse(localStorage.getItem("stash_projects") || "[]"),
+      activeProjectIdx: 0,
+      filter: "all",
+      view: "app",
+      toast: null,
+      syncing: false,
+      dirty: false,
+    };
+
+    if (!state.token || !state.gistId) state.view = "setup";
+
+    // ── Gist API ──
+    async function gistUpload() {
+      const snapshot = {
+        version: 1,
+        syncedAt: new Date().toISOString(),
+        projects: state.projects,
+      };
+      const body = {
+        description: "Stash — todo sync",
+        public: false,
+        files: { [GIST_FILENAME]: { content: JSON.stringify(snapshot, null, 2) } },
+      };
+
+      const url = state.gistId
+        ? `${GITHUB_API}/gists/${state.gistId}`
+        : `${GITHUB_API}/gists`;
+      const method = state.gistId ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: ghHeaders(),
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      const data = await res.json();
+      if (!state.gistId) {
+        state.gistId = data.id;
+        localStorage.setItem("stash_gist_id", data.id);
+      }
+    }
+
+    async function gistDownload() {
+      const res = await fetch(`${GITHUB_API}/gists/${state.gistId}`, {
+        headers: ghHeaders(),
+      });
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+      const data = await res.json();
+      const file = data.files[GIST_FILENAME];
+      if (!file) throw new Error("No stash data found in gist");
+      const snapshot = JSON.parse(file.content);
+      return snapshot.projects;
+    }
+
+    function ghHeaders() {
+      return {
+        Authorization: `Bearer ${state.token}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      };
+    }
+
+    // ── Toast ──
+    function showToast(msg, isError = false) {
+      state.toast = { msg, isError };
+      render();
+      setTimeout(() => { state.toast = null; render(); }, 2500);
+    }
+
+    // ── Helpers ──
+    function activeProject() {
+      return state.projects[state.activeProjectIdx];
+    }
+
+    function genId() {
+      if (crypto.randomUUID) return crypto.randomUUID();
+      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+      });
+    }
+
+    function saveLocal() {
+      localStorage.setItem("stash_projects", JSON.stringify(state.projects));
+      state.dirty = true;
+    }
+
+    function filteredTodos(project) {
+      const todos = [...project.todos].sort((a, b) => {
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        return a.order - b.order;
+      });
+      if (state.filter === "pending") return todos.filter((t) => !t.done);
+      if (state.filter === "done") return todos.filter((t) => t.done);
+      return todos;
+    }
+
+    // ── Render ──
+    function render() {
+      if (state.view === "setup") return renderSetup();
+      renderApp();
+    }
+
+    function renderSetup() {
+      app.innerHTML = `
+        <div class="setup">
+          <h1>Stash</h1>
+          <p>Sync your todos with the desktop app via a private GitHub Gist.</p>
+          <input id="s-token" type="password" placeholder="GitHub personal access token" value="${esc(state.token)}" />
+          <input id="s-gist" type="text" placeholder="Gist ID (from desktop Settings)" value="${esc(state.gistId)}" />
+          <div class="btn-row">
+            <button class="btn btn-primary" id="s-connect" ${state.syncing ? "disabled" : ""}>
+              ${state.syncing ? '<span class="syncing-indicator"></span> Connecting...' : "Connect & Download"}
+            </button>
+          </div>
+          <p style="font-size:0.625rem;opacity:0.4;margin-top:8px;max-width:340px">
+            The desktop app auto-syncs on open/close. Here, your changes are local until you tap upload.
+            Look for the "UNSAVED" indicator in the status bar.
+          </p>
+          <p style="font-size:0.625rem;opacity:0.3;margin-top:4px;max-width:340px">
+            Token: GitHub &rarr; Settings &rarr; Developer settings &rarr;
+            Fine-grained tokens &rarr; grant "Gists" read/write.
+          </p>
+        </div>
+        ${toastHtml()}
+      `;
+
+      $("#s-token").addEventListener("input", (e) => (state.token = e.target.value));
+      $("#s-gist").addEventListener("input", (e) => (state.gistId = e.target.value));
+      $("#s-connect").addEventListener("click", handleConnect);
+    }
+
+    async function handleConnect() {
+      const token = state.token.trim();
+      const gistId = state.gistId.trim();
+      if (!token) return showToast("Token is required", true);
+      if (!gistId) return showToast("Gist ID is required — upload from desktop first", true);
+
+      state.token = token;
+      state.gistId = gistId;
+      localStorage.setItem("stash_token", token);
+      localStorage.setItem("stash_gist_id", gistId);
+
+      state.syncing = true;
+      render();
+      try {
+        state.projects = await gistDownload();
+        state.activeProjectIdx = 0;
+        saveLocal();
+        state.view = "app";
+        showToast(`Downloaded ${state.projects.length} project${state.projects.length === 1 ? "" : "s"}`);
+      } catch (e) {
+        showToast(e.message, true);
+      } finally {
+        state.syncing = false;
+        render();
+      }
+    }
+
+    function renderApp() {
+      const proj = activeProject();
+      const todos = proj ? filteredTodos(proj) : [];
+      const pending = proj ? proj.todos.filter((t) => !t.done).length : 0;
+      const total = proj ? proj.todos.length : 0;
+
+      app.innerHTML = `
+        <div class="app">
+          <div class="header">
+            <h1>STASH</h1>
+            <div class="header-actions">
+              <button class="btn btn-sm ${state.dirty ? "btn-dirty" : ""}" id="h-upload" ${state.syncing ? "disabled" : ""}>
+                ${state.syncing
+                  ? '<span class="syncing-indicator"></span>'
+                  : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'}
+              </button>
+              <button class="btn btn-sm" id="h-download" ${state.syncing ? "disabled" : ""}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </button>
+              <button class="btn btn-sm" id="h-settings">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+              </button>
+            </div>
+          </div>
+
+          ${state.projects.length > 0 ? `
+            <div class="tabs">
+              ${state.projects.map((p, i) => `
+                <div class="tab ${i === state.activeProjectIdx ? "active" : ""}" data-idx="${i}">${esc(p.name)}</div>
+              `).join("")}
+            </div>
+            <div class="filters">
+              <button class="filter-btn ${state.filter === "all" ? "active" : ""}" data-filter="all">All (${total})</button>
+              <button class="filter-btn ${state.filter === "pending" ? "active" : ""}" data-filter="pending">Pending (${pending})</button>
+              <button class="filter-btn ${state.filter === "done" ? "active" : ""}" data-filter="done">Done (${total - pending})</button>
+            </div>
+          ` : ""}
+
+          ${proj ? `
+            <div class="add-bar">
+              <input id="add-input" type="text" placeholder="Add a todo..." enterkeyhint="done" />
+              <button class="btn btn-sm btn-primary" id="add-btn">Add</button>
+            </div>
+          ` : ""}
+
+          ${!proj ? `
+            <div class="empty">
+              <div class="empty-icon">&#9744;</div>
+              <p>No projects yet — download from desktop</p>
+            </div>
+          ` : todos.length === 0 ? `
+            <div class="empty">
+              <div class="empty-icon">${state.filter === "done" ? "&#10003;" : "&#9744;"}</div>
+              <p>${state.filter === "pending" ? "All done!" : state.filter === "done" ? "Nothing completed yet" : "No todos — add one below"}</p>
+            </div>
+          ` : `
+            <div class="todo-list">
+              ${todos.map((t) => `
+                <div class="todo-item">
+                  <div class="checkbox ${t.done ? "checked" : ""}" data-toggle="${t.id}"></div>
+                  <span class="todo-text ${t.done ? "done" : ""}">${esc(t.text)}</span>
+                  <button class="delete-btn" data-del="${t.id}">&times;</button>
+                </div>
+              `).join("")}
+            </div>
+          `}
+
+          <div class="status-bar">
+            <span><span class="status-dot ${state.dirty ? "unsaved" : ""}"></span>${state.syncing ? "SYNCING" : state.dirty ? "UNSAVED — tap upload" : "SYNCED"}</span>
+            ${proj ? `<span>TASKS: ${pending}/${total}</span>` : ""}
+          </div>
+        </div>
+        ${toastHtml()}
+      `;
+
+      // ── Bind events ──
+      document.querySelectorAll(".tab").forEach((el) => {
+        el.addEventListener("click", () => {
+          state.activeProjectIdx = parseInt(el.dataset.idx);
+          state.filter = "all";
+          render();
+        });
+      });
+
+      document.querySelectorAll(".filter-btn").forEach((el) => {
+        el.addEventListener("click", () => {
+          state.filter = el.dataset.filter;
+          render();
+        });
+      });
+
+      document.querySelectorAll("[data-toggle]").forEach((el) => {
+        el.addEventListener("click", () => toggleTodo(el.dataset.toggle));
+      });
+
+      document.querySelectorAll("[data-del]").forEach((el) => {
+        el.addEventListener("click", () => deleteTodo(el.dataset.del));
+      });
+
+      const addInput = $("#add-input");
+      const addBtn = $("#add-btn");
+      if (addInput) {
+        addInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            addTodo(addInput.value);
+          }
+        });
+        addBtn.addEventListener("click", () => addTodo(addInput.value));
+      }
+
+      $("#h-upload")?.addEventListener("click", handleUpload);
+      $("#h-download")?.addEventListener("click", handleDownload);
+      $("#h-settings")?.addEventListener("click", () => {
+        state.view = "setup";
+        render();
+      });
+    }
+
+    // ── Actions ──
+    function addTodo(text) {
+      text = text.trim();
+      if (!text) return;
+      const proj = activeProject();
+      if (!proj) return;
+
+      proj.todos.forEach((t) => { if (!t.done) t.order++; });
+      proj.todos.unshift({
+        id: genId(),
+        text,
+        done: false,
+        createdAt: new Date().toISOString(),
+        doneAt: null,
+        order: 0,
+      });
+      saveLocal();
+      render();
+      setTimeout(() => {
+        const inp = $("#add-input");
+        if (inp) { inp.value = ""; inp.focus(); }
+      }, 0);
+    }
+
+    function toggleTodo(id) {
+      const proj = activeProject();
+      if (!proj) return;
+      const todo = proj.todos.find((t) => t.id === id);
+      if (!todo) return;
+      todo.done = !todo.done;
+      todo.doneAt = todo.done ? new Date().toISOString() : null;
+      saveLocal();
+      render();
+    }
+
+    function deleteTodo(id) {
+      const proj = activeProject();
+      if (!proj) return;
+      proj.todos = proj.todos.filter((t) => t.id !== id);
+      saveLocal();
+      render();
+    }
+
+    async function handleUpload() {
+      state.syncing = true;
+      render();
+      try {
+        await gistUpload();
+        state.dirty = false;
+        showToast(`Uploaded ${state.projects.length} project${state.projects.length === 1 ? "" : "s"}`);
+      } catch (e) {
+        showToast(e.message, true);
+      } finally {
+        state.syncing = false;
+        render();
+      }
+    }
+
+    async function handleDownload() {
+      state.syncing = true;
+      render();
+      try {
+        state.projects = await gistDownload();
+        if (state.activeProjectIdx >= state.projects.length) state.activeProjectIdx = 0;
+        localStorage.setItem("stash_projects", JSON.stringify(state.projects));
+        state.dirty = false;
+        showToast(`Downloaded ${state.projects.length} project${state.projects.length === 1 ? "" : "s"}`);
+      } catch (e) {
+        showToast(e.message, true);
+      } finally {
+        state.syncing = false;
+        render();
+      }
+    }
+
+    // ── Utilities ──
+    function esc(s) {
+      const d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function toastHtml() {
+      if (!state.toast) return "";
+      return `<div class="toast ${state.toast.isError ? "error" : ""}">${esc(state.toast.msg)}</div>`;
+    }
+
+    // ── Service Worker ──
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
+
+    // ── Auto-download on launch ──
+    async function autoSync() {
+      if (!state.token || !state.gistId || state.view !== "app") return;
+      try {
+        const projects = await gistDownload();
+        state.projects = projects;
+        localStorage.setItem("stash_projects", JSON.stringify(state.projects));
+        if (state.activeProjectIdx >= state.projects.length) state.activeProjectIdx = 0;
+        state.dirty = false;
+        render();
+        console.log("[sync] Auto-downloaded on launch");
+      } catch (e) {
+        console.error("[sync] Auto-download failed:", e);
+      }
+    }
+
+    // ── Boot ──
+    render();
+    autoSync();
+  </script>
+</body>
+</html>
