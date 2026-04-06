@@ -11,6 +11,10 @@ interface SettingsActions {
   setLastProjectId: (id: string | null) => Promise<void>;
   setMinimizeToTray: (enabled: boolean) => Promise<void>;
   setStartWithSystem: (enabled: boolean) => Promise<void>;
+  setGithubToken: (token: string | null) => Promise<void>;
+  setGistId: (id: string | null) => Promise<void>;
+  setLastSyncedAt: (ts: string | null) => Promise<void>;
+  setFontSize: (size: "small" | "medium" | "large") => Promise<void>;
 }
 
 interface SettingsState extends Settings {
@@ -25,6 +29,10 @@ const useSettingsStore = create<SettingsState>()((set, get) => ({
   lastProjectId: null,
   minimizeToTray: true,
   startWithSystem: false,
+  githubToken: null,
+  gistId: null,
+  lastSyncedAt: null,
+  fontSize: "small" as const,
   initialized: false,
   actions: {
     initialize: async () => {
@@ -32,6 +40,7 @@ const useSettingsStore = create<SettingsState>()((set, get) => ({
       const settings = await loadSettings();
       set({ ...settings, initialized: true });
       applyTheme(settings.theme);
+      applyFontSize(settings.fontSize);
     },
 
     setTheme: async (theme) => {
@@ -73,8 +82,33 @@ const useSettingsStore = create<SettingsState>()((set, get) => ({
       set({ startWithSystem: enabled });
       await persistSettings(get());
     },
+
+    setGithubToken: async (token) => {
+      set({ githubToken: token });
+      await persistSettings(get());
+    },
+
+    setGistId: async (id) => {
+      set({ gistId: id });
+      await persistSettings(get());
+    },
+
+    setLastSyncedAt: async (ts) => {
+      set({ lastSyncedAt: ts });
+      await persistSettings(get());
+    },
+
+    setFontSize: async (fontSize) => {
+      set({ fontSize });
+      applyFontSize(fontSize);
+      await persistSettings(get());
+    },
   },
 }));
+
+function applyFontSize(size: "small" | "medium" | "large"): void {
+  document.documentElement.dataset.fontSize = size;
+}
 
 function applyTheme(theme: "light" | "dark"): void {
   if (theme === "dark") {
@@ -92,6 +126,10 @@ function persistSettings(state: SettingsState): Promise<void> {
     lastProjectId: state.lastProjectId,
     minimizeToTray: state.minimizeToTray,
     startWithSystem: state.startWithSystem,
+    githubToken: state.githubToken,
+    gistId: state.gistId,
+    lastSyncedAt: state.lastSyncedAt,
+    fontSize: state.fontSize,
   });
 }
 
@@ -106,6 +144,10 @@ export const useMinimizeToTray = () =>
   useSettingsStore((s) => s.minimizeToTray);
 export const useStartWithSystem = () =>
   useSettingsStore((s) => s.startWithSystem);
+export const useGithubToken = () => useSettingsStore((s) => s.githubToken);
+export const useGistId = () => useSettingsStore((s) => s.gistId);
+export const useLastSyncedAt = () => useSettingsStore((s) => s.lastSyncedAt);
+export const useFontSize = () => useSettingsStore((s) => s.fontSize);
 export const useSettingsInitialized = () =>
   useSettingsStore((s) => s.initialized);
 export const useSettingsActions = () => useSettingsStore((s) => s.actions);

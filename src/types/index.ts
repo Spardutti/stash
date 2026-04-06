@@ -21,6 +21,10 @@ export interface Settings {
   lastProjectId: string | null;
   minimizeToTray: boolean;
   startWithSystem: boolean;
+  githubToken: string | null;
+  gistId: string | null;
+  lastSyncedAt: string | null;
+  fontSize: "small" | "medium" | "large";
 }
 
 export type TodoFilter = "all" | "pending" | "done";
