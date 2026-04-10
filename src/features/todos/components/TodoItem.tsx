@@ -1,10 +1,12 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { m } from "motion/react";
 import type { Todo } from "@/types";
+import { needsLabelPrompt } from "@/types";
 import { useProjectActions } from "@/stores/projectStore";
 import { AnimatedCheckbox } from "./AnimatedCheckbox";
+import { LabelPromptModal } from "./LabelPromptModal";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -42,6 +44,21 @@ export const TodoItem = memo(function TodoItem({
   const [copied, setCopied] = useState(false);
   // Local "completing" state — plays animation before toggling
   const [completing, setCompleting] = useState(false);
+  const [labelModal, setLabelModal] = useState<
+    { autoPrompted: boolean } | null
+  >(null);
+
+  const displayText = todo.label ?? todo.text;
+  const hasLabel = Boolean(todo.label);
+
+  const editRef = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    if (!isEditing) return;
+    const el = editRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 320)}px`;
+  }, [isEditing, editText]);
 
   const {
     attributes,
@@ -64,10 +81,19 @@ export const TodoItem = memo(function TodoItem({
 
   const handleSave = async () => {
     const trimmed = editText.trim();
-    if (trimmed && trimmed !== todo.text) {
+    const changed = trimmed && trimmed !== todo.text;
+    if (changed) {
       await actions.editTodo(projectId, todo.id, trimmed);
     }
     setIsEditing(false);
+    if (
+      changed &&
+      !todo.label &&
+      !todo.labelPromptDismissed &&
+      needsLabelPrompt(trimmed)
+    ) {
+      setLabelModal({ autoPrompted: true });
+    }
   };
 
   const handleCopy = () => {
@@ -95,20 +121,25 @@ export const TodoItem = memo(function TodoItem({
   if (isEditing) {
     return (
       <div ref={setNodeRef} style={dndStyle}>
-        <div className="flex items-center gap-3 px-2 py-2.5">
-          <input
+        <div className="flex items-start gap-3 px-2 py-2.5">
+          <textarea
             autoFocus
+            rows={1}
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleSave();
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSave();
+              }
               if (e.key === "Escape") {
                 setIsEditing(false);
                 setEditText(todo.text);
               }
             }}
             onBlur={handleSave}
-            className="flex-1 rounded bg-transparent border border-border/30 px-2 py-1 text-sm text-foreground focus:border-tertiary focus:outline-none"
+            ref={editRef}
+            className="flex-1 resize-none rounded bg-transparent border border-border/30 px-2 py-1 text-sm leading-snug text-foreground focus:border-tertiary focus:outline-none"
           />
         </div>
       </div>
@@ -116,6 +147,7 @@ export const TodoItem = memo(function TodoItem({
   }
 
   return (
+    <>
     <ContextMenu>
       <ContextMenuTrigger>
         {/* Outer: dnd-kit controls transform */}
@@ -165,7 +197,7 @@ export const TodoItem = memo(function TodoItem({
                 setEditText(todo.text);
                 setIsEditing(true);
               }}
-              className="relative flex-1 text-sm font-medium break-words min-w-0 cursor-pointer"
+              className="relative flex-1 text-sm font-medium break-words whitespace-pre-wrap min-w-0 cursor-pointer"
             >
               <m.span
                 animate={{
@@ -174,8 +206,21 @@ export const TodoItem = memo(function TodoItem({
                     : "var(--foreground)",
                 }}
                 transition={{ duration: 0.25 }}
+                className="inline-flex items-center gap-1.5"
               >
-                {todo.text}
+                {hasLabel ? (
+                  <span
+                    className="inline-flex shrink-0 text-on-surface-variant/50"
+                    aria-label="Task has a label — full content hidden"
+                    title="Labeled task — click to expand"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                      <line x1="7" y1="7" x2="7.01" y2="7" />
+                    </svg>
+                  </span>
+                ) : null}
+                <span>{displayText}</span>
               </m.span>
               {/* Strikethrough line that draws left-to-right */}
               <m.span
@@ -256,6 +301,13 @@ export const TodoItem = memo(function TodoItem({
           </svg>
           {todo.done ? "Mark pending" : "Mark done"}
         </ContextMenuItem>
+        <ContextMenuItem onClick={() => setLabelModal({ autoPrompted: false })}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+            <line x1="7" y1="7" x2="7.01" y2="7" />
+          </svg>
+          {hasLabel ? "Edit label" : "Add label"}
+        </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
           onClick={() => actions.deleteTodo(projectId, todo.id)}
@@ -270,5 +322,30 @@ export const TodoItem = memo(function TodoItem({
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
+    <LabelPromptModal
+      open={labelModal !== null}
+      autoPrompted={labelModal?.autoPrompted ?? false}
+      initialLabel={todo.label ?? ""}
+      content={todo.text}
+      onSave={async (label) => {
+        await actions.setTodoLabel(projectId, todo.id, label);
+        setLabelModal(null);
+      }}
+      onSkip={async () => {
+        if (labelModal?.autoPrompted) {
+          await actions.dismissLabelPrompt(projectId, todo.id);
+        }
+        setLabelModal(null);
+      }}
+      onRemove={
+        todo.label
+          ? async () => {
+              await actions.setTodoLabel(projectId, todo.id, null);
+              setLabelModal(null);
+            }
+          : undefined
+      }
+    />
+    </>
   );
 });

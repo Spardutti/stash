@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   Tooltip,
   TooltipTrigger,
@@ -31,7 +31,15 @@ interface TodoInputProps {
 export function TodoInput({ onAdd, onAddMultiple }: TodoInputProps) {
   const [text, setText] = useState("");
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea to fit content (syncs with layout, not after paint)
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 240)}px`;
+  }, [text]);
 
   // Listen for Ctrl+L focus event from MainLayout
   useEffect(() => {
@@ -56,7 +64,7 @@ export function TodoInput({ onAdd, onAddMultiple }: TodoInputProps) {
     setText("");
   };
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     if (!onAddMultiple) return;
 
     const pasted = e.clipboardData.getData("text/plain");
@@ -69,10 +77,10 @@ export function TodoInput({ onAdd, onAddMultiple }: TodoInputProps) {
   };
 
   return (
-    <div className="relative flex items-center group mb-4">
+    <div className="relative flex items-start group mb-4">
       <Tooltip>
         <TooltipTrigger
-          className="absolute left-4 text-on-surface-variant group-focus-within:text-foreground transition-colors"
+          className="absolute left-4 top-3 text-on-surface-variant group-focus-within:text-foreground transition-colors"
           aria-label="Add task"
         >
           <svg
@@ -94,16 +102,20 @@ export function TodoInput({ onAdd, onAddMultiple }: TodoInputProps) {
           Paste lines starting with -, *, or [] to add multiple tasks
         </TooltipContent>
       </Tooltip>
-      <input
+      <textarea
         ref={inputRef}
+        rows={1}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") handleSubmit();
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+          }
         }}
         onPaste={handlePaste}
         placeholder={PLACEHOLDERS[placeholderIndex]}
-        className="h-10 w-full rounded-lg bg-surface-high border border-border/10 pl-12 pr-4 text-sm text-foreground placeholder:text-on-surface-variant/50 focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none transition-all"
+        className="min-h-10 w-full resize-none rounded-lg bg-surface-high border border-border/10 pl-12 pr-4 py-2.5 text-sm leading-snug text-foreground placeholder:text-on-surface-variant/50 focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none transition-all"
       />
     </div>
   );
