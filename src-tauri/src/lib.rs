@@ -79,6 +79,27 @@ async fn destroy_tray(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn open_external_url(url: String) -> Result<(), String> {
+    // Only allow https URLs to prevent arbitrary command execution.
+    if !url.starts_with("https://") {
+        return Err("Only https URLs are allowed".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("cmd")
+        .args(["/C", "start", "", &url])
+        .spawn();
+
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg(&url).spawn();
+
+    #[cfg(target_os = "linux")]
+    let result = std::process::Command::new("xdg-open").arg(&url).spawn();
+
+    result.map(|_| ()).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -91,7 +112,11 @@ pub fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--minimized"]),
         ))
-        .invoke_handler(tauri::generate_handler![create_tray, destroy_tray])
+        .invoke_handler(tauri::generate_handler![
+            create_tray,
+            destroy_tray,
+            open_external_url
+        ])
         .setup(|app| {
             // If launched with --minimized (autostart), hide the main window
             let args: Vec<String> = std::env::args().collect();
