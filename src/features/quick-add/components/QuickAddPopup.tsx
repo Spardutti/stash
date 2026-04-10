@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { emit } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import type { Project } from "@/types";
+import { needsLabelPrompt } from "@/types";
 import {
   loadAllProjects,
   loadSettings,
@@ -13,11 +14,19 @@ import type { Settings } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
+interface PendingLabel {
+  projectId: string;
+  todoId: string;
+  text: string;
+}
+
 export function QuickAddPopup() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [text, setText] = useState("");
   const [loaded, setLoaded] = useState(false);
+  const [pendingLabel, setPendingLabel] = useState<PendingLabel | null>(null);
+  const [labelInput, setLabelInput] = useState("");
   const settingsRef = useRef<Settings | null>(null);
 
   const persistActiveProject = useCallback((projectId: string) => {
@@ -26,12 +35,7 @@ export function QuickAddPopup() {
     saveSettings(settingsRef.current);
   }, []);
 
-  const inputRef = useCallback((node: HTMLInputElement | null) => {
-    if (node) {
-      // Tauri windows need time to gain OS focus before input focus works
-      setTimeout(() => node.focus(), 150);
-    }
-  }, []);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -68,6 +72,69 @@ export function QuickAddPopup() {
     };
   }, []);
 
+  // The quick-add window is kept alive and toggled via show/hide. Re-focus
+  // the input (and reset state) both on first mount and every time the
+  // parent window emits "quick-add:shown".
+  useEffect(() => {
+    if (!loaded) return;
+
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    const focusInput = () => {
+      if (cancelled) return;
+      inputRef.current?.focus();
+    };
+
+    const refocusWithRetries = () => {
+      focusInput();
+      // Compositor may still be handing over OS focus — retry a few times.
+      [30, 100, 250, 500].forEach((ms) => {
+        timers.push(setTimeout(focusInput, ms));
+      });
+    };
+
+    const resetAndFocus = () => {
+      setText("");
+      setPendingLabel(null);
+      setLabelInput("");
+      refocusWithRetries();
+    };
+
+    // Initial mount — the window is being shown for the first time.
+    refocusWithRetries();
+
+    // Tauri fires this whenever the OS hands focus to this window.
+    const unlistenFocusP = getCurrentWindow().onFocusChanged(({ payload }) => {
+      if (payload) refocusWithRetries();
+    });
+
+    // Custom event from quickAddWindow.toggleQuickAddWindow() — resets state
+    // and reloads projects so they stay in sync with the main window.
+    const unlistenShownP = listen("quick-add:shown", async () => {
+      resetAndFocus();
+      try {
+        const fresh = await loadAllProjects();
+        if (cancelled) return;
+        setProjects(fresh);
+        const lastId = settingsRef.current?.lastProjectId;
+        if (lastId) {
+          const idx = fresh.findIndex((p) => p.id === lastId);
+          if (idx !== -1) setSelectedIndex(idx);
+        }
+      } catch {
+        /* keep existing projects if reload fails */
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+      unlistenFocusP.then((fn) => fn()).catch(() => {});
+      unlistenShownP.then((fn) => fn()).catch(() => {});
+    };
+  }, [loaded]);
+
   const handleSubmit = async () => {
     const trimmed = text.trim();
     const project = projects[selectedIndex];
@@ -96,6 +163,45 @@ export function QuickAddPopup() {
     await emit("todo-added", { projectId: project.id });
     persistActiveProject(project.id);
     setText("");
+
+    if (needsLabelPrompt(trimmed)) {
+      setPendingLabel({ projectId: project.id, todoId: todo.id, text: trimmed });
+      setLabelInput("");
+    }
+  };
+
+  const patchPendingTodo = async (
+    patch: { label?: string; labelPromptDismissed?: boolean },
+  ) => {
+    if (!pendingLabel) return;
+    const target = projects.find((p) => p.id === pendingLabel.projectId);
+    if (!target) {
+      setPendingLabel(null);
+      return;
+    }
+    const updated: Project = {
+      ...target,
+      todos: target.todos.map((t) =>
+        t.id === pendingLabel.todoId ? { ...t, ...patch } : t,
+      ),
+    };
+    setProjects((prev) =>
+      prev.map((p) => (p.id === updated.id ? updated : p)),
+    );
+    await saveProject(updated);
+    await emit("todo-added", { projectId: updated.id });
+    setPendingLabel(null);
+    setLabelInput("");
+  };
+
+  const handleSaveLabel = async () => {
+    const trimmed = labelInput.trim();
+    if (!trimmed) return;
+    await patchPendingTodo({ label: trimmed });
+  };
+
+  const handleSkipLabel = async () => {
+    await patchPendingTodo({ labelPromptDismissed: true });
   };
 
   const switchProject = useCallback(
@@ -112,7 +218,11 @@ export function QuickAddPopup() {
       e.preventDefault();
       handleSubmit();
     } else if (e.key === "Escape") {
-      getCurrentWindow().close();
+      if (pendingLabel) {
+        handleSkipLabel();
+      } else {
+        getCurrentWindow().hide();
+      }
     } else if (e.key === "Tab") {
       e.preventDefault();
       if (projects.length > 0) {
@@ -178,6 +288,45 @@ export function QuickAddPopup() {
         placeholder="What needs to be done?"
         className="h-10 text-sm"
       />
+
+      {/* Inline label prompt for long tasks */}
+      {pendingLabel ? (
+        <div className="mt-3 rounded-lg border border-border/15 bg-surface-high p-3">
+          <p className="text-xs text-on-surface-variant">
+            Saved long task — add a short label?
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <Input
+              autoFocus
+              value={labelInput}
+              onChange={(e) => setLabelInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSaveLabel();
+                } else if (e.key === "Escape") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSkipLabel();
+                }
+              }}
+              placeholder="e.g. Send message to Alex"
+              className="h-8 flex-1 text-sm"
+            />
+            <Button
+              size="sm"
+              onClick={handleSaveLabel}
+              disabled={!labelInput.trim()}
+            >
+              Save
+            </Button>
+            <Button size="sm" variant="secondary" onClick={handleSkipLabel}>
+              Skip
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Footer hints */}
       <div className="mt-4 flex items-center justify-between text-xs text-on-surface-variant/40">
