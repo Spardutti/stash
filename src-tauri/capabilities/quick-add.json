@@ -4,7 +4,9 @@
   "permissions": [
     "core:default",
     "core:window:allow-close",
+    "core:window:allow-hide",
     "core:event:allow-emit",
+    "core:event:allow-listen",
     "fs:allow-appdata-read-recursive",
     "fs:allow-appdata-write-recursive"
   ]

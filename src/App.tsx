@@ -18,7 +18,10 @@ import {
 } from "@/stores/settingsStore";
 import { downloadFromGist, uploadToGist } from "@/services/gistSync";
 import { importWorkspaceFromJson } from "@/services/storage";
-import { openQuickAddWindow } from "@/services/quickAddWindow";
+import {
+  ensureQuickAddWindow,
+  toggleQuickAddWindow,
+} from "@/services/quickAddWindow";
 import { openQuickViewWindow } from "@/services/quickViewWindow";
 import { initTray } from "@/services/tray";
 import { MainLayout } from "@/features/layout/MainLayout";
@@ -156,6 +159,15 @@ function MainApp() {
     };
   }, [projectActions]);
 
+  // Precreate the quick-add window (hidden) so the first shortcut press is
+  // just a show() — avoids the new-window focus race on Linux/Windows.
+  useEffect(() => {
+    if (!initialized) return;
+    ensureQuickAddWindow().catch((err) =>
+      console.error("Failed to precreate quick-add window:", err),
+    );
+  }, [initialized]);
+
   // Register global shortcut for quick-add popup
   useEffect(() => {
     if (!initialized) return;
@@ -168,7 +180,7 @@ function MainApp() {
       .then(() =>
         register(shortcut, (event) => {
           if (event.state === "Pressed") {
-            openQuickAddWindow();
+            toggleQuickAddWindow();
           }
         }),
       )

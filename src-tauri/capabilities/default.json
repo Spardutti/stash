@@ -18,6 +18,8 @@
     "core:menu:default",
     "core:window:allow-show",
     "core:window:allow-hide",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-is-visible",
     "process:allow-exit",
     "autostart:allow-enable",
     "autostart:allow-disable",

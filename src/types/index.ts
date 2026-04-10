@@ -5,6 +5,18 @@ export interface Todo {
   createdAt: string;
   doneAt: string | null;
   order: number;
+  label?: string;
+  labelPromptDismissed?: boolean;
+}
+
+export const LABEL_LINE_THRESHOLD = 3;
+export const LABEL_CHAR_THRESHOLD = 160;
+
+export function needsLabelPrompt(text: string): boolean {
+  return (
+    text.split("\n").length > LABEL_LINE_THRESHOLD ||
+    text.length > LABEL_CHAR_THRESHOLD
+  );
 }
 
 export interface Project {

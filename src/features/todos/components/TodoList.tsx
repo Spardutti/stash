@@ -22,6 +22,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import type { Project, Todo } from "@/types";
+import { needsLabelPrompt } from "@/types";
 import { useTodoFilter, useProjectActions } from "@/stores/projectStore";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { TodoInput } from "./TodoInput";
@@ -29,6 +30,7 @@ import { TodoFilters } from "./TodoFilters";
 import { TodoItem } from "./TodoItem";
 import { BulkActions } from "./BulkActions";
 import { DragOverlayItem } from "./DragOverlayItem";
+import { LabelPromptModal } from "./LabelPromptModal";
 
 // Measure droppables continuously for accurate drop targets
 const measuring = {
@@ -56,6 +58,11 @@ export function TodoList({ project }: TodoListProps) {
   const filter = useTodoFilter();
   const actions = useProjectActions();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [autoPromptTodoId, setAutoPromptTodoId] = useState<string | null>(null);
+
+  const autoPromptTodo = autoPromptTodoId
+    ? project.todos.find((t) => t.id === autoPromptTodoId)
+    : undefined;
 
   // Local reorder state — takes priority during drag to prevent snap-back
   const [localPendingOrder, setLocalPendingOrder] = useState<string[] | null>(
@@ -241,7 +248,12 @@ export function TodoList({ project }: TodoListProps) {
 
           {/* Task input */}
           <TodoInput
-            onAdd={(text) => actions.addTodo(project.id, text)}
+            onAdd={async (text) => {
+              const todo = await actions.addTodo(project.id, text);
+              if (todo && needsLabelPrompt(text)) {
+                setAutoPromptTodoId(todo.id);
+              }
+            }}
             onAddMultiple={(texts) => actions.addTodos(project.id, texts)}
           />
 
@@ -289,6 +301,22 @@ export function TodoList({ project }: TodoListProps) {
           )}
         </div>
       </div>
+      <LabelPromptModal
+        open={autoPromptTodo !== undefined}
+        autoPrompted
+        content={autoPromptTodo?.text ?? ""}
+        onSave={async (label) => {
+          if (!autoPromptTodo) return;
+          await actions.setTodoLabel(project.id, autoPromptTodo.id, label);
+          setAutoPromptTodoId(null);
+        }}
+        onSkip={async () => {
+          if (autoPromptTodo) {
+            await actions.dismissLabelPrompt(project.id, autoPromptTodo.id);
+          }
+          setAutoPromptTodoId(null);
+        }}
+      />
     </div>
   );
 }

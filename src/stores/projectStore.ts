@@ -15,9 +15,15 @@ interface ProjectActions {
   createProject: (name: string) => Promise<void>;
   renameProject: (id: string, name: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
-  addTodo: (projectId: string, text: string) => Promise<void>;
-  addTodos: (projectId: string, texts: string[]) => Promise<void>;
+  addTodo: (projectId: string, text: string) => Promise<Todo | null>;
+  addTodos: (projectId: string, texts: string[]) => Promise<Todo[]>;
   editTodo: (projectId: string, todoId: string, text: string) => Promise<void>;
+  setTodoLabel: (
+    projectId: string,
+    todoId: string,
+    label: string | null,
+  ) => Promise<void>;
+  dismissLabelPrompt: (projectId: string, todoId: string) => Promise<void>;
   deleteTodo: (projectId: string, todoId: string) => Promise<void>;
   toggleTodo: (projectId: string, todoId: string) => Promise<void>;
   reorderTodos: (projectId: string, orderedIds: string[]) => Promise<void>;
@@ -99,7 +105,7 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
 
     addTodo: async (projectId, text) => {
       const project = get().projects.find((p) => p.id === projectId);
-      if (!project) return;
+      if (!project) return null;
 
       // Shift existing pending todos down by 1 to make room at the top
       const shiftedTodos = project.todos.map((t) =>
@@ -122,12 +128,13 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
           p.id === projectId ? updated : p,
         ),
       }));
+      return todo;
     },
 
     addTodos: async (projectId, texts) => {
-      if (texts.length === 0) return;
+      if (texts.length === 0) return [];
       const project = get().projects.find((p) => p.id === projectId);
-      if (!project) return;
+      if (!project) return [];
 
       // Shift existing pending todos down to make room at the top
       const shiftedTodos = project.todos.map((t) =>
@@ -154,6 +161,7 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
           p.id === projectId ? updated : p,
         ),
       }));
+      return newTodos;
     },
 
     editTodo: async (projectId, todoId, text) => {
@@ -164,6 +172,51 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
         ...project,
         todos: project.todos.map((t) =>
           t.id === todoId ? { ...t, text } : t,
+        ),
+      };
+      await saveProject(updated);
+      set((state) => ({
+        projects: state.projects.map((p) =>
+          p.id === projectId ? updated : p,
+        ),
+      }));
+    },
+
+    setTodoLabel: async (projectId, todoId, label) => {
+      const project = get().projects.find((p) => p.id === projectId);
+      if (!project) return;
+
+      const trimmed = label?.trim();
+      const updated = {
+        ...project,
+        todos: project.todos.map((t) => {
+          if (t.id !== todoId) return t;
+          const next: Todo = { ...t };
+          if (trimmed) {
+            next.label = trimmed;
+            delete next.labelPromptDismissed;
+          } else {
+            delete next.label;
+          }
+          return next;
+        }),
+      };
+      await saveProject(updated);
+      set((state) => ({
+        projects: state.projects.map((p) =>
+          p.id === projectId ? updated : p,
+        ),
+      }));
+    },
+
+    dismissLabelPrompt: async (projectId, todoId) => {
+      const project = get().projects.find((p) => p.id === projectId);
+      if (!project) return;
+
+      const updated = {
+        ...project,
+        todos: project.todos.map((t) =>
+          t.id === todoId ? { ...t, labelPromptDismissed: true } : t,
         ),
       };
       await saveProject(updated);
