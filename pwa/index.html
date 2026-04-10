@@ -146,9 +146,15 @@
 
     .todo-text {
       font-size: 0.85rem; line-height: 1.5; flex: 1;
-      word-break: break-word; padding-top: 1px;
+      word-break: break-word; white-space: pre-wrap; padding-top: 1px;
+      display: flex; align-items: flex-start; gap: 6px;
     }
     .todo-text.done { text-decoration: line-through; opacity: 0.35; }
+    .todo-text .label-icon {
+      flex-shrink: 0; opacity: 0.4; margin-top: 3px;
+    }
+    .todo-item.labeled.expanded .todo-text .display { display: none; }
+    .todo-item.labeled:not(.expanded) .todo-text .full { display: none; }
 
     .delete-btn {
       width: 28px; height: 28px; min-width: 28px; border: none;
@@ -171,18 +177,41 @@
     /* Add bar — pinned above todo list */
     .add-bar {
       flex-shrink: 0;
-      display: flex; gap: 8px; padding: 10px 16px;
+      display: flex; gap: 8px; padding: 10px 16px; align-items: flex-start;
       background: var(--surface-lowest);
       border-bottom: 1px solid rgba(71,71,71,0.15);
     }
-    .add-bar input {
-      flex: 1; height: 40px; border-radius: 4px;
+    .add-bar textarea {
+      flex: 1; min-height: 40px; max-height: 160px; border-radius: 4px;
       border: 1px solid var(--outline-variant);
       background: var(--surface); color: var(--foreground);
-      padding: 0 12px; font-size: 16px; outline: none;
+      padding: 10px 12px; font-size: 16px; outline: none;
+      font-family: var(--font); line-height: 1.4; resize: none;
     }
-    .add-bar input:focus { border-color: var(--tertiary); }
-    .add-bar input::placeholder { color: rgba(198,198,198,0.4); }
+    .add-bar textarea:focus { border-color: var(--tertiary); }
+    .add-bar textarea::placeholder { color: rgba(198,198,198,0.4); }
+    .add-bar .btn { margin-top: 4px; }
+
+    /* Label prompt banner — shown after saving a long task */
+    .label-banner {
+      flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 10px 16px; background: var(--surface);
+      border-bottom: 1px solid rgba(71,71,71,0.15);
+    }
+    .label-banner p {
+      font-size: 0.7rem; color: var(--on-surface-variant); opacity: 0.7;
+    }
+    .label-banner .row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .label-banner input {
+      flex: 1; height: 36px; border-radius: 4px;
+      border: 1px solid var(--outline-variant);
+      background: var(--surface-low); color: var(--foreground);
+      padding: 0 10px; font-size: 16px; outline: none;
+    }
+    .label-banner input:focus { border-color: var(--tertiary); }
 
     /* Status bar — pinned at very bottom */
     .status-bar {
@@ -257,7 +286,17 @@
       toast: null,
       syncing: false,
       dirty: false,
+      expandedIds: new Set(),
+      pendingLabel: null, // { projectIdx, todoId, text }
+      labelInput: "",
     };
+
+    const LABEL_LINE_THRESHOLD = 3;
+    const LABEL_CHAR_THRESHOLD = 160;
+    function needsLabelPrompt(text) {
+      return text.split("\n").length > LABEL_LINE_THRESHOLD
+        || text.length > LABEL_CHAR_THRESHOLD;
+    }
 
     if (!state.token || !state.gistId) state.view = "setup";
 
@@ -449,9 +488,19 @@
 
           ${proj ? `
             <div class="add-bar">
-              <input id="add-input" type="text" placeholder="Add a todo..." enterkeyhint="done" />
+              <textarea id="add-input" rows="1" placeholder="Add a todo... (Shift+Enter = newline)" enterkeyhint="send"></textarea>
               <button class="btn btn-sm btn-primary" id="add-btn">Add</button>
             </div>
+            ${state.pendingLabel ? `
+              <div class="label-banner">
+                <p>Saved long task — add a short label?</p>
+                <div class="row">
+                  <input id="label-input" type="text" placeholder="e.g. Send message to Alex" value="${esc(state.labelInput)}" />
+                  <button class="btn btn-sm btn-primary" id="label-save">Save</button>
+                  <button class="btn btn-sm" id="label-skip">Skip</button>
+                </div>
+              </div>
+            ` : ""}
           ` : ""}
 
           ${!proj ? `
@@ -466,13 +515,28 @@
             </div>
           ` : `
             <div class="todo-list">
-              ${todos.map((t) => `
-                <div class="todo-item">
+              ${todos.map((t) => {
+                const labeled = !!t.label;
+                const expanded = state.expandedIds.has(t.id);
+                const classes = [
+                  "todo-item",
+                  labeled ? "labeled" : "",
+                  expanded ? "expanded" : "",
+                ].filter(Boolean).join(" ");
+                const labelIcon = labeled
+                  ? '<svg class="label-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>'
+                  : "";
+                const inner = labeled
+                  ? `${labelIcon}<span class="display">${esc(t.label)}</span><span class="full">${esc(t.text)}</span>`
+                  : esc(t.text);
+                return `
+                <div class="${classes}">
                   <div class="checkbox ${t.done ? "checked" : ""}" data-toggle="${t.id}"></div>
-                  <span class="todo-text ${t.done ? "done" : ""}">${esc(t.text)}</span>
+                  <span class="todo-text ${t.done ? "done" : ""}" ${labeled ? `data-expand="${t.id}"` : ""}>${inner}</span>
                   <button class="delete-btn" data-del="${t.id}">&times;</button>
                 </div>
-              `).join("")}
+              `;
+              }).join("")}
             </div>
           `}
 
@@ -508,16 +572,50 @@
         el.addEventListener("click", () => deleteTodo(el.dataset.del));
       });
 
+      document.querySelectorAll("[data-expand]").forEach((el) => {
+        el.addEventListener("click", () => {
+          const id = el.dataset.expand;
+          if (state.expandedIds.has(id)) state.expandedIds.delete(id);
+          else state.expandedIds.add(id);
+          render();
+        });
+      });
+
       const addInput = $("#add-input");
       const addBtn = $("#add-btn");
       if (addInput) {
+        const autoResize = () => {
+          addInput.style.height = "auto";
+          addInput.style.height = Math.min(addInput.scrollHeight, 160) + "px";
+        };
+        addInput.addEventListener("input", autoResize);
+        autoResize();
         addInput.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
+          if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             addTodo(addInput.value);
           }
         });
         addBtn.addEventListener("click", () => addTodo(addInput.value));
+      }
+
+      const labelInput = $("#label-input");
+      if (labelInput) {
+        labelInput.focus();
+        labelInput.addEventListener("input", (e) => {
+          state.labelInput = e.target.value;
+        });
+        labelInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            saveLabel();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            skipLabel();
+          }
+        });
+        $("#label-save")?.addEventListener("click", saveLabel);
+        $("#label-skip")?.addEventListener("click", skipLabel);
       }
 
       $("#h-upload")?.addEventListener("click", handleUpload);
@@ -535,21 +633,65 @@
       const proj = activeProject();
       if (!proj) return;
 
-      proj.todos.forEach((t) => { if (!t.done) t.order++; });
-      proj.todos.unshift({
+      const todo = {
         id: genId(),
         text,
         done: false,
         createdAt: new Date().toISOString(),
         doneAt: null,
         order: 0,
-      });
+      };
+
+      proj.todos.forEach((t) => { if (!t.done) t.order++; });
+      proj.todos.unshift(todo);
       saveLocal();
+
+      if (needsLabelPrompt(text)) {
+        state.pendingLabel = {
+          projectIdx: state.activeProjectIdx,
+          todoId: todo.id,
+          text,
+        };
+        state.labelInput = "";
+      }
+
       render();
       setTimeout(() => {
         const inp = $("#add-input");
-        if (inp) { inp.value = ""; inp.focus(); }
+        if (inp) {
+          inp.value = "";
+          inp.style.height = "auto";
+          // Don't steal focus from label banner if it just opened.
+          if (!state.pendingLabel) inp.focus();
+        }
       }, 0);
+    }
+
+    function patchPendingTodo(patch) {
+      if (!state.pendingLabel) return;
+      const proj = state.projects[state.pendingLabel.projectIdx];
+      if (!proj) {
+        state.pendingLabel = null;
+        state.labelInput = "";
+        render();
+        return;
+      }
+      const todo = proj.todos.find((t) => t.id === state.pendingLabel.todoId);
+      if (todo) Object.assign(todo, patch);
+      state.pendingLabel = null;
+      state.labelInput = "";
+      saveLocal();
+      render();
+    }
+
+    function saveLabel() {
+      const trimmed = state.labelInput.trim();
+      if (!trimmed) return;
+      patchPendingTodo({ label: trimmed });
+    }
+
+    function skipLabel() {
+      patchPendingTodo({ labelPromptDismissed: true });
     }
 
     function toggleTodo(id) {

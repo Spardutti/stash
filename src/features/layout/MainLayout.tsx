@@ -5,6 +5,7 @@ import { ProjectSwitcher } from "@/features/projects/components/ProjectSwitcher"
 import { TodoList } from "@/features/todos/components/TodoList";
 import { SettingsPage } from "@/features/settings/components/SettingsPage";
 import { StatusBar } from "@/features/layout/StatusBar";
+import { UpdateBanner } from "@/features/layout/UpdateBanner";
 import {
   useActiveProject,
   useActiveProjectId,
@@ -113,6 +114,7 @@ export function MainLayout() {
         />
 
         <main className="flex flex-1 flex-col overflow-hidden bg-surface">
+          <UpdateBanner />
           {view === "settings" ? (
             <SettingsPage />
           ) : activeProject ? (
