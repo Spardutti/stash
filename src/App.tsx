@@ -196,7 +196,7 @@ function MainApp() {
 
   // Register global shortcut to show/focus the main window
   useEffect(() => {
-    if (!initialized || !minimizeToTray) return;
+    if (!initialized) return;
 
     const shortcut = toTauriShortcut(quickViewHotkey);
     let registered = true;
@@ -223,7 +223,7 @@ function MainApp() {
         unregister(shortcut).catch(() => {});
       }
     };
-  }, [initialized, minimizeToTray, quickViewHotkey]);
+  }, [initialized, quickViewHotkey]);
 
   if (error) {
     return (
