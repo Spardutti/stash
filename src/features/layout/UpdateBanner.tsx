@@ -6,8 +6,6 @@ import {
 } from "@/services/updateCheck";
 
 const DISMISSED_KEY = "stash_update_dismissed_version";
-const LAST_CHECKED_KEY = "stash_update_last_checked";
-const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
 
 export function UpdateBanner() {
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
@@ -15,13 +13,9 @@ export function UpdateBanner() {
   useEffect(() => {
     let cancelled = false;
 
-    const lastChecked = Number(localStorage.getItem(LAST_CHECKED_KEY) ?? 0);
-    if (Date.now() - lastChecked < CHECK_INTERVAL_MS) return;
-
     (async () => {
       try {
         const info = await checkForUpdate();
-        localStorage.setItem(LAST_CHECKED_KEY, String(Date.now()));
         if (cancelled || !info) return;
         const dismissed = localStorage.getItem(DISMISSED_KEY);
         if (dismissed === info.latestVersion) return;
