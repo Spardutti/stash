@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
 const RELEASES_API =
   "https://api.github.com/repos/Spardutti/stash/releases/latest";
@@ -37,7 +38,7 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export async function checkForUpdate(): Promise<UpdateInfo | null> {
-  const res = await fetch(RELEASES_API, {
+  const res = await tauriFetch(RELEASES_API, {
     headers: { Accept: "application/vnd.github+json" },
   });
   if (!res.ok) throw new Error(`Update check failed: ${res.status}`);
