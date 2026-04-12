@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { toggleQuickAddWindow } from "./quickAddWindow";
-import { openQuickViewWindow } from "./quickViewWindow";
 
 let initialized = false;
 let unlisteners: UnlistenFn[] = [];
@@ -15,11 +14,7 @@ export async function initTray(): Promise<void> {
     toggleQuickAddWindow();
   });
 
-  const unlistenView = await listen("tray-quick-view", () => {
-    openQuickViewWindow();
-  });
-
-  unlisteners = [unlistenAdd, unlistenView];
+  unlisteners = [unlistenAdd];
   initialized = true;
 }
 

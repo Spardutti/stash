@@ -14,9 +14,6 @@ fn handle_tray_menu_event(app: &tauri::AppHandle, event: MenuEvent) {
         "quick-add" => {
             let _ = app.emit("tray-quick-add", ());
         }
-        "quick-view" => {
-            let _ = app.emit("tray-quick-view", ());
-        }
         "quit" => {
             let _ = app.emit("tray-quit-requested", ());
         }
@@ -35,9 +32,6 @@ async fn create_tray(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     let quick_add_item = MenuItem::with_id(&app, "quick-add", "Quick Add", true, None::<&str>)
         .map_err(|e| e.to_string())?;
-    let quick_view_item =
-        MenuItem::with_id(&app, "quick-view", "Quick View", true, None::<&str>)
-            .map_err(|e| e.to_string())?;
     let separator = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
     let separator2 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
     let quit_item = MenuItem::with_id(&app, "quit", "Quit Stash", true, None::<&str>)
@@ -49,7 +43,6 @@ async fn create_tray(app: tauri::AppHandle) -> Result<(), String> {
             &open_item,
             &separator,
             &quick_add_item,
-            &quick_view_item,
             &separator2,
             &quit_item,
         ],
@@ -103,6 +96,13 @@ fn open_external_url(url: String) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.unminimize();
+                let _ = w.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())

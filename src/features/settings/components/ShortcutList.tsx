@@ -72,7 +72,7 @@ export function ShortcutList() {
           </div>
           <div className="flex items-center justify-between py-1.5">
             <span className={`text-sm ${minimizeToTray ? "text-foreground" : "text-on-surface-variant/30"}`}>
-              Quick view popup
+              Show window
               {!minimizeToTray && (
                 <span className="ml-2 text-[10px] text-on-surface-variant/30">(enable tray)</span>
               )}

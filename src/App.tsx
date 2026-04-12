@@ -22,11 +22,9 @@ import {
   ensureQuickAddWindow,
   toggleQuickAddWindow,
 } from "@/services/quickAddWindow";
-import { openQuickViewWindow } from "@/services/quickViewWindow";
 import { initTray } from "@/services/tray";
 import { MainLayout } from "@/features/layout/MainLayout";
 import { QuickAddPopup } from "@/features/quick-add/components/QuickAddPopup";
-import { QuickViewPopup } from "@/features/quick-view/components/QuickViewPopup";
 
 const params = new URLSearchParams(window.location.search);
 const windowType = params.get("window");
@@ -149,7 +147,7 @@ function MainApp() {
     };
   }, [githubToken, gistId]);
 
-  // Listen for todos added from quick-add or quick-view windows
+  // Listen for todos added from quick-add window
   useEffect(() => {
     const unlisten = listen<{ projectId: string }>("todo-added", (event) => {
       projectActions.reloadProject(event.payload.projectId);
@@ -196,7 +194,7 @@ function MainApp() {
     };
   }, [initialized, hotkey]);
 
-  // Register global shortcut for quick-view popup (only when tray enabled)
+  // Register global shortcut to show/focus the main window
   useEffect(() => {
     if (!initialized || !minimizeToTray) return;
 
@@ -206,14 +204,17 @@ function MainApp() {
     unregister(shortcut)
       .catch(() => {})
       .then(() =>
-        register(shortcut, (event) => {
+        register(shortcut, async (event) => {
           if (event.state === "Pressed") {
-            openQuickViewWindow();
+            const win = getCurrentWindow();
+            await win.show();
+            await win.unminimize();
+            await win.setFocus();
           }
         }),
       )
       .catch((err) => {
-        console.error("Failed to register quick-view shortcut:", err);
+        console.error("Failed to register show-window shortcut:", err);
         registered = false;
       });
 
@@ -222,7 +223,7 @@ function MainApp() {
         unregister(shortcut).catch(() => {});
       }
     };
-  }, [initialized, quickViewHotkey]);
+  }, [initialized, minimizeToTray, quickViewHotkey]);
 
   if (error) {
     return (
@@ -246,9 +247,6 @@ function MainApp() {
 function App() {
   if (windowType === "quick-add") {
     return <QuickAddPopup />;
-  }
-  if (windowType === "quick-view") {
-    return <QuickViewPopup />;
   }
   return <MainApp />;
 }
