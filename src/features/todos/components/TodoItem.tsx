@@ -7,6 +7,7 @@ import { needsLabelPrompt } from "@/types";
 import { useProjectActions } from "@/stores/projectStore";
 import { AnimatedCheckbox } from "./AnimatedCheckbox";
 import { LabelPromptModal } from "./LabelPromptModal";
+import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -47,6 +48,7 @@ export const TodoItem = memo(function TodoItem({
   const [labelModal, setLabelModal] = useState<
     { autoPrompted: boolean } | null
   >(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const displayText = todo.label ?? todo.text;
   const hasLabel = Boolean(todo.label);
@@ -163,7 +165,11 @@ export const TodoItem = memo(function TodoItem({
             exit={exitAnimation}
             transition={{ layout: layoutTransition }}
             style={{ overflow: "hidden" }}
-            className="task-row group flex items-start gap-3 px-2 py-2.5 cursor-pointer border-b border-border/5 transition-colors"
+            className={`task-row group flex items-start gap-3 px-2 py-2.5 cursor-pointer border-b border-border/5 transition-colors ${
+              todo.priority
+                ? "border-l-2 border-l-tertiary bg-tertiary/5"
+                : ""
+            }`}
           >
             {sortable ? (
               <button
@@ -255,7 +261,31 @@ export const TodoItem = memo(function TodoItem({
               </button>
 
               <button
-                onClick={() => actions.deleteTodo(projectId, todo.id)}
+                onClick={() => actions.togglePriority(projectId, todo.id)}
+                className={`rounded p-1 transition-colors ${
+                  todo.priority
+                    ? "text-tertiary hover:opacity-80"
+                    : "text-on-surface-variant/50 hover:text-foreground"
+                }`}
+                aria-label={todo.priority ? "Remove priority" : "Mark as priority"}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill={todo.priority ? "currentColor" : "none"}
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              </button>
+
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
                 className="rounded p-1 text-on-surface-variant/50 hover:text-error transition-colors"
                 aria-label="Delete todo"
               >
@@ -310,7 +340,7 @@ export const TodoItem = memo(function TodoItem({
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
-          onClick={() => actions.deleteTodo(projectId, todo.id)}
+          onClick={() => setShowDeleteConfirm(true)}
           className="text-destructive focus:text-destructive"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -345,6 +375,18 @@ export const TodoItem = memo(function TodoItem({
             }
           : undefined
       }
+    />
+    <ConfirmDialog
+      open={showDeleteConfirm}
+      title="Delete task"
+      message={`Delete "${displayText}"? This cannot be undone.`}
+      confirmLabel="Delete"
+      variant="destructive"
+      onConfirm={async () => {
+        await actions.deleteTodo(projectId, todo.id);
+        setShowDeleteConfirm(false);
+      }}
+      onCancel={() => setShowDeleteConfirm(false)}
     />
     </>
   );

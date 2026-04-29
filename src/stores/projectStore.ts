@@ -26,7 +26,12 @@ interface ProjectActions {
   dismissLabelPrompt: (projectId: string, todoId: string) => Promise<void>;
   deleteTodo: (projectId: string, todoId: string) => Promise<void>;
   toggleTodo: (projectId: string, todoId: string) => Promise<void>;
-  reorderTodos: (projectId: string, orderedIds: string[]) => Promise<void>;
+  togglePriority: (projectId: string, todoId: string) => Promise<void>;
+  reorderTodos: (
+    projectId: string,
+    orderedIds: string[],
+    priorityIds?: Set<string>,
+  ) => Promise<void>;
   bulkDeleteDone: (projectId: string) => Promise<void>;
   reloadProject: (projectId: string) => Promise<void>;
 }
@@ -267,7 +272,42 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
       }));
     },
 
-    reorderTodos: async (projectId, orderedIds) => {
+    togglePriority: async (projectId, todoId) => {
+      const project = get().projects.find((p) => p.id === projectId);
+      if (!project) return;
+
+      const target = project.todos.find((t) => t.id === todoId);
+      if (!target) return;
+      const nextPriority = !target.priority;
+
+      // New top-of-zone order = min(zone orders) - 1, or 0 if zone is empty.
+      const zonePeers = project.todos.filter(
+        (t) => !t.done && t.id !== todoId && Boolean(t.priority) === nextPriority,
+      );
+      const minOrder = zonePeers.length
+        ? Math.min(...zonePeers.map((t) => t.order))
+        : 0;
+      const newOrder = zonePeers.length ? minOrder - 1 : 0;
+
+      const updated = {
+        ...project,
+        todos: project.todos.map((t) => {
+          if (t.id !== todoId) return t;
+          const next: Todo = { ...t, order: newOrder };
+          if (nextPriority) next.priority = true;
+          else delete next.priority;
+          return next;
+        }),
+      };
+      await saveProject(updated);
+      set((state) => ({
+        projects: state.projects.map((p) =>
+          p.id === projectId ? updated : p,
+        ),
+      }));
+    },
+
+    reorderTodos: async (projectId, orderedIds, priorityIds) => {
       const project = get().projects.find((p) => p.id === projectId);
       if (!project) return;
 
@@ -275,7 +315,13 @@ const useProjectStore = create<ProjectState>()((set, get) => ({
         ...project,
         todos: project.todos.map((t) => {
           const idx = orderedIds.indexOf(t.id);
-          return idx !== -1 ? { ...t, order: idx } : t;
+          if (idx === -1) return t;
+          const next: Todo = { ...t, order: idx };
+          if (priorityIds) {
+            if (priorityIds.has(t.id)) next.priority = true;
+            else delete next.priority;
+          }
+          return next;
         }),
       };
       await saveProject(updated);

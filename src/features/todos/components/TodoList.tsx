@@ -64,8 +64,12 @@ export function TodoList({ project }: TodoListProps) {
     ? project.todos.find((t) => t.id === autoPromptTodoId)
     : undefined;
 
-  // Local reorder state — takes priority during drag to prevent snap-back
-  const [localPendingOrder, setLocalPendingOrder] = useState<string[] | null>(
+  // Local reorder state — takes priority during drag to prevent snap-back.
+  // Two zones: priority (top) and normal (bottom).
+  const [localPriorityOrder, setLocalPriorityOrder] = useState<string[] | null>(
+    null,
+  );
+  const [localNormalOrder, setLocalNormalOrder] = useState<string[] | null>(
     null,
   );
   const isDragging = useRef(false);
@@ -77,21 +81,31 @@ export function TodoList({ project }: TodoListProps) {
     }),
   );
 
-  const { pendingTodos, doneTodos, doneCount } = useMemo(() => {
-    const pending = project.todos
-      .filter((t) => !t.done)
-      .sort((a, b) => a.order - b.order);
+  const { priorityTodos, normalTodos, pendingTodos, doneTodos, doneCount } =
+    useMemo(() => {
+      const pending = project.todos
+        .filter((t) => !t.done)
+        .sort((a, b) => a.order - b.order);
 
-    const done = project.todos
-      .filter((t) => t.done)
-      .sort((a, b) => {
-        const aTime = a.doneAt ? new Date(a.doneAt).getTime() : 0;
-        const bTime = b.doneAt ? new Date(b.doneAt).getTime() : 0;
-        return bTime - aTime;
-      });
+      const priority = pending.filter((t) => t.priority);
+      const normal = pending.filter((t) => !t.priority);
 
-    return { pendingTodos: pending, doneTodos: done, doneCount: done.length };
-  }, [project.todos]);
+      const done = project.todos
+        .filter((t) => t.done)
+        .sort((a, b) => {
+          const aTime = a.doneAt ? new Date(a.doneAt).getTime() : 0;
+          const bTime = b.doneAt ? new Date(b.doneAt).getTime() : 0;
+          return bTime - aTime;
+        });
+
+      return {
+        priorityTodos: priority,
+        normalTodos: normal,
+        pendingTodos: pending,
+        doneTodos: done,
+        doneCount: done.length,
+      };
+    }, [project.todos]);
 
   // Staggered bulk delete — IDs being dismissed one by one
   const [dismissingIds, setDismissingIds] = useState<Set<string>>(new Set());
@@ -114,30 +128,36 @@ export function TodoList({ project }: TodoListProps) {
     }, ids.length * 50 + 300);
   }, [doneTodos, actions, project.id]);
 
-  // Use local order during drag, store order otherwise
-  const pendingIds = useMemo(() => {
-    if (localPendingOrder) return localPendingOrder;
-    return pendingTodos.map((t) => t.id);
-  }, [localPendingOrder, pendingTodos]);
+  // Use local zone orders during drag, store order otherwise
+  const priorityIds = useMemo(() => {
+    if (localPriorityOrder) return localPriorityOrder;
+    return priorityTodos.map((t) => t.id);
+  }, [localPriorityOrder, priorityTodos]);
 
-  // Build visible todos from the current pending order, filtering out dismissing items
-  const visibleTodos = useMemo(() => {
+  const normalIds = useMemo(() => {
+    if (localNormalOrder) return localNormalOrder;
+    return normalTodos.map((t) => t.id);
+  }, [localNormalOrder, normalTodos]);
+
+  // Build the visible task lists for each zone, filtering out dismissing items
+  const { visiblePriorityTodos, visibleNormalTodos, visibleDoneTodos } = useMemo(() => {
     const pendingMap = new Map(pendingTodos.map((t) => [t.id, t]));
-    const orderedPending = pendingIds
-      .map((id) => pendingMap.get(id))
-      .filter((t): t is Todo => t !== undefined);
+    const ordered = (ids: string[]) =>
+      ids.map((id) => pendingMap.get(id)).filter((t): t is Todo => t !== undefined);
 
     const filteredDone = doneTodos.filter((t) => !dismissingIds.has(t.id));
 
-    switch (filter) {
-      case "pending":
-        return orderedPending;
-      case "done":
-        return filteredDone;
-      default:
-        return [...orderedPending, ...filteredDone];
-    }
-  }, [filter, pendingIds, pendingTodos, doneTodos, dismissingIds]);
+    return {
+      visiblePriorityTodos: ordered(priorityIds),
+      visibleNormalTodos: ordered(normalIds),
+      visibleDoneTodos: filteredDone,
+    };
+  }, [pendingTodos, priorityIds, normalIds, doneTodos, dismissingIds]);
+
+  const showPriority = filter !== "done" && visiblePriorityTodos.length > 0;
+  const showNormal = filter !== "done" && visibleNormalTodos.length > 0;
+  const showDone = filter !== "pending" && visibleDoneTodos.length > 0;
+  const isEmpty = !showPriority && !showNormal && !showDone;
 
   const activeTodo: Todo | undefined = activeId
     ? project.todos.find((t) => t.id === activeId)
@@ -146,39 +166,84 @@ export function TodoList({ project }: TodoListProps) {
   const handleDragStart = (event: DragStartEvent) => {
     isDragging.current = true;
     setActiveId(event.active.id as string);
-    setLocalPendingOrder(pendingTodos.map((t) => t.id));
+    setLocalPriorityOrder(priorityTodos.map((t) => t.id));
+    setLocalNormalOrder(normalTodos.map((t) => t.id));
   };
 
-  // Reorder in real-time during drag
+  // Reorder in real-time during drag — supports cross-zone moves
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id || !localPendingOrder) return;
+    if (!over || !localPriorityOrder || !localNormalOrder) return;
+    const activeId = active.id as string;
+    const overId = over.id as string;
+    if (activeId === overId) return;
 
-    const oldIndex = localPendingOrder.indexOf(active.id as string);
-    const newIndex = localPendingOrder.indexOf(over.id as string);
-    if (oldIndex === -1 || newIndex === -1) return;
+    const fromZone: "priority" | "normal" | null = localPriorityOrder.includes(
+      activeId,
+    )
+      ? "priority"
+      : localNormalOrder.includes(activeId)
+        ? "normal"
+        : null;
+    const toZone: "priority" | "normal" | null = localPriorityOrder.includes(
+      overId,
+    )
+      ? "priority"
+      : localNormalOrder.includes(overId)
+        ? "normal"
+        : null;
+    if (!fromZone || !toZone) return;
 
-    setLocalPendingOrder(arrayMove(localPendingOrder, oldIndex, newIndex));
+    if (fromZone === toZone) {
+      const list = fromZone === "priority" ? localPriorityOrder : localNormalOrder;
+      const setList =
+        fromZone === "priority" ? setLocalPriorityOrder : setLocalNormalOrder;
+      const oldIdx = list.indexOf(activeId);
+      const newIdx = list.indexOf(overId);
+      if (oldIdx === -1 || newIdx === -1 || oldIdx === newIdx) return;
+      setList(arrayMove(list, oldIdx, newIdx));
+    } else {
+      const fromList =
+        fromZone === "priority" ? localPriorityOrder : localNormalOrder;
+      const toList =
+        fromZone === "priority" ? localNormalOrder : localPriorityOrder;
+      const setFrom =
+        fromZone === "priority" ? setLocalPriorityOrder : setLocalNormalOrder;
+      const setTo =
+        fromZone === "priority" ? setLocalNormalOrder : setLocalPriorityOrder;
+
+      setFrom(fromList.filter((id) => id !== activeId));
+      const insertIdx = toList.indexOf(overId);
+      if (insertIdx === -1) {
+        setTo([...toList, activeId]);
+      } else {
+        setTo([
+          ...toList.slice(0, insertIdx),
+          activeId,
+          ...toList.slice(insertIdx),
+        ]);
+      }
+    }
   };
 
   const handleDragEnd = async (_event: DragEndEvent) => {
     isDragging.current = false;
     setActiveId(null);
 
-    if (!localPendingOrder) {
-      return;
-    }
+    if (!localPriorityOrder || !localNormalOrder) return;
 
-    // Always persist — onDragOver already moved the item, so
-    // active.id === over.id by the time dragEnd fires
-    await actions.reorderTodos(project.id, localPendingOrder);
-    setLocalPendingOrder(null);
+    const orderedIds = [...localPriorityOrder, ...localNormalOrder];
+    const priorityIdSet = new Set(localPriorityOrder);
+    await actions.reorderTodos(project.id, orderedIds, priorityIdSet);
+    setLocalPriorityOrder(null);
+    setLocalNormalOrder(null);
   };
 
   const handleDragCancel = () => {
     isDragging.current = false;
     setActiveId(null);
-    setLocalPendingOrder(null);
+    setLocalPriorityOrder(null);
+    setLocalNormalOrder(null);
   };
 
   // Listen for Ctrl+D bulk delete event from MainLayout
@@ -258,7 +323,7 @@ export function TodoList({ project }: TodoListProps) {
           />
 
           {/* Task list */}
-          {visibleTodos.length === 0 ? (
+          {isEmpty ? (
             <div className="flex h-32 items-center justify-center">
               <p className="text-sm text-on-surface-variant">
                 {filter === "done"
@@ -278,21 +343,52 @@ export function TodoList({ project }: TodoListProps) {
               onDragEnd={handleDragEnd}
               onDragCancel={handleDragCancel}
             >
-              <SortableContext
-                items={pendingIds}
-                strategy={verticalListSortingStrategy}
-              >
+              {showPriority && (
+                <SortableContext
+                  items={priorityIds}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <AnimatePresence initial={false}>
+                    {visiblePriorityTodos.map((todo) => (
+                      <TodoItem
+                        key={todo.id}
+                        todo={todo}
+                        projectId={project.id}
+                        sortable
+                      />
+                    ))}
+                  </AnimatePresence>
+                </SortableContext>
+              )}
+              {showNormal && (
+                <SortableContext
+                  items={normalIds}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <AnimatePresence initial={false}>
+                    {visibleNormalTodos.map((todo) => (
+                      <TodoItem
+                        key={todo.id}
+                        todo={todo}
+                        projectId={project.id}
+                        sortable
+                      />
+                    ))}
+                  </AnimatePresence>
+                </SortableContext>
+              )}
+              {showDone && (
                 <AnimatePresence initial={false}>
-                  {visibleTodos.map((todo) => (
+                  {visibleDoneTodos.map((todo) => (
                     <TodoItem
                       key={todo.id}
                       todo={todo}
                       projectId={project.id}
-                      sortable={!todo.done}
+                      sortable={false}
                     />
                   ))}
                 </AnimatePresence>
-              </SortableContext>
+              )}
               {/* Always mounted — children conditional */}
               <DragOverlay dropAnimation={dropAnimation}>
                 {activeTodo ? <DragOverlayItem todo={activeTodo} /> : null}
