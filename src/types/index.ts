@@ -7,6 +7,7 @@ export interface Todo {
   order: number;
   label?: string;
   labelPromptDismissed?: boolean;
+  priority?: boolean;
 }
 
 export const LABEL_LINE_THRESHOLD = 3;

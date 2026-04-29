@@ -33,6 +33,10 @@ export function ProjectItem({ project, isActive, onSelect }: ProjectItemProps) {
   const [editName, setEditName] = useState(project.name);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const priorityCount = project.todos.filter(
+    (t) => t.priority && !t.done,
+  ).length;
+
   const startRename = () => {
     setEditName(project.name);
     setTimeout(() => setIsEditing(true), 100);
@@ -112,6 +116,14 @@ export function ProjectItem({ project, isActive, onSelect }: ProjectItemProps) {
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
               </svg>
               <span className="truncate">{project.name}</span>
+              {priorityCount > 0 && (
+                <span
+                  className="ml-1 inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-tertiary/15 px-1 text-[0.625rem] font-bold text-tertiary"
+                  aria-label={`${priorityCount} priority task${priorityCount === 1 ? "" : "s"}`}
+                >
+                  {priorityCount}
+                </span>
+              )}
             </div>
 
             {/* Three-dot dropdown */}

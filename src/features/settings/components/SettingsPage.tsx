@@ -11,6 +11,7 @@ import { uploadToGist, downloadFromGist } from "@/services/gistSync";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import { ShortcutList } from "./ShortcutList";
+import { DataSyncSetupModal } from "./DataSyncSetupModal";
 
 const FONT_SIZES = [
   { value: "small" as const, label: "S" },
@@ -31,6 +32,7 @@ export function SettingsPage() {
   const [tokenInput, setTokenInput] = useState(githubToken ?? "");
   const [syncStatus, setSyncStatus] = useState<{ type: "idle" | "success" | "error"; message: string }>({ type: "idle", message: "" });
   const [syncing, setSyncing] = useState(false);
+  const [showSyncSetup, setShowSyncSetup] = useState(false);
 
   const handleSaveToken = async () => {
     const trimmed = tokenInput.trim();
@@ -101,6 +103,7 @@ export function SettingsPage() {
   };
 
   return (
+    <>
     <div className="flex flex-1 min-h-0 flex-col">
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-5xl mx-auto">
@@ -217,9 +220,20 @@ export function SettingsPage() {
               <div className="space-y-6">
                 {/* Cloud Sync */}
                 <div>
-                  <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/50">
+                  <h3 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/50">
                     Cloud Sync
                   </h3>
+                  <button
+                    onClick={() => setShowSyncSetup(true)}
+                    className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-tertiary hover:opacity-80 transition-opacity"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                    How do I set this up?
+                  </button>
                   <p className="text-xs text-on-surface-variant/60 mb-4">
                     Sync via a private GitHub Gist. The desktop app auto-downloads on launch and auto-uploads on close.
                     On mobile, changes stay local until you tap upload — look for the "UNSAVED" indicator.
@@ -310,5 +324,7 @@ export function SettingsPage() {
         </div>
       </div>
     </div>
+    <DataSyncSetupModal open={showSyncSetup} onClose={() => setShowSyncSetup(false)} />
+    </>
   );
 }
