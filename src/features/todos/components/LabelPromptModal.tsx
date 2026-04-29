@@ -53,7 +53,7 @@ export function LabelPromptModal({
         onClick={onSkip}
         role="presentation"
       />
-      <div className="glass relative z-10 w-full max-w-lg rounded-lg p-6 shadow-float border border-border/10">
+      <div className="relative z-10 w-full max-w-lg rounded-lg bg-surface-highest p-6 shadow-float border border-border/10">
         <h3 className="text-base font-bold text-foreground">
           {autoPrompted ? "This task is long — add a short label?" : "Edit label"}
         </h3>
