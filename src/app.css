@@ -96,6 +96,7 @@
   --color-on-surface-variant: var(--on-surface-variant);
   --color-tertiary: var(--tertiary);
   --color-error: var(--error);
+  --color-on-error: var(--on-error);
 
   /* All radii locked to 2px default, 4px for lg per DESIGN.md */
   --radius-sm: 0.125rem;
@@ -165,7 +166,7 @@
   --tertiary: #1a73e8;
   --on-tertiary: #ffffff;
   --error: #dc2626;
-  --on-error: #ffffff;
+  --on-error: #1a1c1c;
   --shadow-float-value: 0px 4px 20px rgb(0 0 0 / 0.1);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);

@@ -47,7 +47,7 @@ export function ConfirmDialog({
         onClick={onCancel}
         role="presentation"
       />
-      <div className="glass relative z-10 w-full max-w-sm rounded-lg p-6 shadow-float border border-border/10">
+      <div className="relative z-10 w-full max-w-sm rounded-lg bg-surface-highest p-6 shadow-float border border-border/10">
         <h3 className="text-base font-bold text-foreground">
           {title}
         </h3>
