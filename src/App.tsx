@@ -54,6 +54,7 @@ function MainApp() {
   const githubToken = useGithubToken();
   const gistId = useGistId();
   const [error, setError] = useState<string | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     if (didInit) return;
@@ -121,13 +122,16 @@ function MainApp() {
     }
   }
 
-  // Handle window close — auto-upload, then hide to tray or quit
+  // Handle window close — hide-first if tray, otherwise show spinner and quit
   useEffect(() => {
     const unlisten = listen("window-close-requested", async () => {
-      await autoUpload();
       if (minimizeToTray) {
+        // Hide instantly so it feels snappy; upload runs in the background.
         await getCurrentWindow().hide();
+        autoUpload().catch(() => {});
       } else {
+        if (githubToken && gistId) setIsClosing(true);
+        await autoUpload();
         await exit(0);
       }
     });
@@ -136,9 +140,10 @@ function MainApp() {
     };
   }, [minimizeToTray, githubToken, gistId]);
 
-  // Handle tray "Quit" — auto-upload, then exit
+  // Handle tray "Quit" — show spinner, auto-upload, then exit
   useEffect(() => {
     const unlisten = listen("tray-quit-requested", async () => {
+      if (githubToken && gistId) setIsClosing(true);
       await autoUpload();
       await exit(0);
     });
@@ -207,9 +212,18 @@ function MainApp() {
         register(shortcut, async (event) => {
           if (event.state === "Pressed") {
             const win = getCurrentWindow();
-            await win.show();
-            await win.unminimize();
-            await win.setFocus();
+            const [visible, focused, minimized] = await Promise.all([
+              win.isVisible(),
+              win.isFocused(),
+              win.isMinimized(),
+            ]);
+            if (visible && focused && !minimized) {
+              await win.hide();
+            } else {
+              await win.show();
+              await win.unminimize();
+              await win.setFocus();
+            }
           }
         }),
       )
@@ -241,7 +255,31 @@ function MainApp() {
     );
   }
 
-  return <MainLayout />;
+  return (
+    <>
+      <MainLayout />
+      {isClosing && <ClosingOverlay />}
+    </>
+  );
+}
+
+function ClosingOverlay() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-lowest/80 backdrop-blur-sm">
+      <div className="flex flex-col items-center gap-3 text-on-surface-variant">
+        <svg
+          className="h-6 w-6 animate-spin text-tertiary"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4z" />
+        </svg>
+        <p className="text-sm">Saving and quitting…</p>
+      </div>
+    </div>
+  );
 }
 
 function App() {

@@ -6,6 +6,7 @@ import { TodoList } from "@/features/todos/components/TodoList";
 import { SettingsPage } from "@/features/settings/components/SettingsPage";
 import { StatusBar } from "@/features/layout/StatusBar";
 import { UpdateBanner } from "@/features/layout/UpdateBanner";
+import { WaylandWarningBanner } from "@/features/layout/WaylandWarningBanner";
 import {
   useActiveProject,
   useActiveProjectId,
@@ -115,6 +116,7 @@ export function MainLayout() {
 
         <main className="flex flex-1 flex-col overflow-hidden bg-surface">
           <UpdateBanner />
+          <WaylandWarningBanner />
           {view === "settings" ? (
             <SettingsPage />
           ) : activeProject ? (

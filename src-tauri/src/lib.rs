@@ -73,6 +73,20 @@ async fn destroy_tray(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn is_wayland_session() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        std::env::var("XDG_SESSION_TYPE")
+            .map(|v| v.eq_ignore_ascii_case("wayland"))
+            .unwrap_or(false)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        false
+    }
+}
+
+#[tauri::command]
 fn open_external_url(url: String) -> Result<(), String> {
     // Only allow https URLs to prevent arbitrary command execution.
     if !url.starts_with("https://") {
@@ -115,7 +129,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             create_tray,
             destroy_tray,
-            open_external_url
+            open_external_url,
+            is_wayland_session
         ])
         .setup(|app| {
             // If launched with --minimized (autostart), hide the main window
