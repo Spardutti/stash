@@ -202,12 +202,12 @@ export function TodoList({ project }: TodoListProps) {
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-5xl mx-auto">
           {/* Page header — large editorial heading + filters */}
-          <div className="flex items-end justify-between mb-8 border-b border-border/10 pb-4">
+          <div className="flex items-start justify-between mb-4 border-b border-border/10 pb-3">
             <div>
               <h1 className="text-[2.25rem] font-bold tracking-tighter leading-none mb-2 text-foreground">
                 {project.name}
               </h1>
-              <p className="text-sm text-on-surface-variant flex items-center gap-2">
+              <div className="text-sm text-on-surface-variant flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-tertiary" />
                 {pendingCount} Pending task{pendingCount !== 1 ? "s" : ""}
                 {pendingCount > 0 && (
@@ -238,10 +238,10 @@ export function TodoList({ project }: TodoListProps) {
                     <TooltipContent>{headerCopied ? "Copied!" : "Copy all pending todos"}</TooltipContent>
                   </Tooltip>
                 )}
-              </p>
+                <BulkActions projectId={project.id} doneCount={doneCount} onDelete={staggerDeleteDone} />
+              </div>
             </div>
             <div className="flex items-center gap-4">
-              <BulkActions projectId={project.id} doneCount={doneCount} onDelete={staggerDeleteDone} />
               <TodoFilters />
             </div>
           </div>
