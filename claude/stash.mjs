@@ -72,6 +72,25 @@ function cmdProjects() {
   }
 }
 
+// Must match slugify in src/services/storage.ts, or the app saves to a second file.
+function slugify(name) {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function cmdCreate(name) {
+  const slug = slugify(name);
+  if (!slug) fail('Missing "name". Use letters or numbers.');
+  const file = join(DIR, `${slug}.json`);
+  if (existsSync(file)) fail(`Project "${name}" already exists.`);
+  const data = { id: randomUUID(), name: name.trim(), createdAt: new Date().toISOString(), todos: [] };
+  save({ file, data });
+  console.log(`Created ${data.name}`);
+}
+
 function cmdList(query) {
   const { data } = findProject(query);
   const pending = data.todos.filter((t) => !t.done).sort(byOrder);
@@ -134,6 +153,7 @@ function cmdDelete(query, idPrefix) {
 
 const USAGE = `Usage:
   stash.mjs projects
+  stash.mjs create "name"
   stash.mjs list <project>
   stash.mjs add <project> "text" [--label "short name"]
   stash.mjs done <project> <id>
@@ -141,6 +161,7 @@ const USAGE = `Usage:
 
 const [cmd, project, ...rest] = process.argv.slice(2);
 if (cmd === "projects") cmdProjects();
+else if (cmd === "create") cmdCreate([project, ...rest].join(" "));
 else if (cmd === "list") cmdList(project);
 else if (cmd === "add") cmdAdd(project, rest);
 else if (cmd === "done") cmdDone(project, rest[0]);
