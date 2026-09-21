@@ -9,7 +9,7 @@ describe("TodoInput", () => {
     const user = userEvent.setup();
 
     render(<TodoInput onAdd={onAdd} />);
-    const input = screen.getByPlaceholderText("Add a todo...");
+    const input = screen.getByPlaceholderText("Add a task...");
 
     await user.type(input, "  Buy groceries  {Enter}");
 
@@ -21,7 +21,7 @@ describe("TodoInput", () => {
     const user = userEvent.setup();
 
     render(<TodoInput onAdd={onAdd} />);
-    const input = screen.getByPlaceholderText("Add a todo...");
+    const input = screen.getByPlaceholderText("Add a task...");
 
     await user.type(input, "Task{Enter}");
 
@@ -33,7 +33,7 @@ describe("TodoInput", () => {
     const user = userEvent.setup();
 
     render(<TodoInput onAdd={onAdd} />);
-    const input = screen.getByPlaceholderText("Add a todo...");
+    const input = screen.getByPlaceholderText("Add a task...");
 
     await user.type(input, "   {Enter}");
 
@@ -45,7 +45,7 @@ describe("TodoInput", () => {
     const user = userEvent.setup();
 
     render(<TodoInput onAdd={onAdd} />);
-    const input = screen.getByPlaceholderText("Add a todo...");
+    const input = screen.getByPlaceholderText("Add a task...");
 
     await user.type(input, "   {Enter}");
 

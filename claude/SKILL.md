@@ -28,7 +28,7 @@ node ~/.claude/skills/stash/stash.mjs <command>
 1. Run `projects`.
 2. Match the current folder name against the project names, any case.
 3. One clear match: use it.
-4. No match, or more than one: ask the user which project. Ally, Gastito and Stealth have no matching folder.
+4. No match, or more than one: ask the user which project.
 
 ## Labels
 
@@ -39,4 +39,4 @@ Give a todo a `--label` when its text runs over 3 lines or 160 characters. The a
 
 ## After writing
 
-The Stash app may not show changes until it restarts. Tell the user once after an `add` or `done`.
+The Stash app shows changes the next time its window gets focus.

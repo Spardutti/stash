@@ -14,6 +14,7 @@ import {
   useProjectActions,
 } from "@/stores/projectStore";
 import { useKeyboardShortcut } from "@/shared/hooks/useKeyboardShortcut";
+import { sidebarOrder } from "@/features/projects/utils/groupProjects";
 
 type View = "project" | "settings";
 
@@ -29,10 +30,11 @@ export function MainLayout() {
   const navigateProject = useCallback(
     (direction: 1 | -1) => {
       if (projects.length === 0) return;
-      const currentIdx = projects.findIndex((p) => p.id === activeProjectId);
+      const ordered = sidebarOrder(projects);
+      const currentIdx = ordered.findIndex((p) => p.id === activeProjectId);
       const nextIdx =
-        (currentIdx + direction + projects.length) % projects.length;
-      const next = projects[nextIdx];
+        (currentIdx + direction + ordered.length) % ordered.length;
+      const next = ordered[nextIdx];
       if (next) {
         projectActions.setActiveProject(next.id);
         setView("project");

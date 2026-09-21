@@ -1,16 +1,39 @@
 #!/usr/bin/env node
 import { randomUUID } from "node:crypto";
-import { readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { homedir, release } from "node:os";
 import { join } from "node:path";
 
-const DIR =
-  process.env.STASH_DIR ??
-  "/mnt/c/Users/Spardutti/AppData/Roaming/com.stash.desktop/projects";
+const APP_ID = "com.stash.desktop";
 
 function fail(message) {
   console.error(message);
   process.exit(1);
 }
+
+// Under WSL the app runs on Windows, so its data sits in a Windows user folder.
+function findWslDir() {
+  const users = "/mnt/c/Users";
+  if (!existsSync(users)) return undefined;
+  return readdirSync(users)
+    .map((user) => join(users, user, "AppData/Roaming", APP_ID, "projects"))
+    .find(existsSync);
+}
+
+function findDataDir() {
+  if (process.env.STASH_DIR) return process.env.STASH_DIR;
+  if (process.platform === "win32") return join(process.env.APPDATA ?? "", APP_ID, "projects");
+  if (process.platform === "darwin") {
+    return join(homedir(), "Library/Application Support", APP_ID, "projects");
+  }
+  const dataHome = process.env.XDG_DATA_HOME ?? join(homedir(), ".local/share");
+  const linuxDir = join(dataHome, APP_ID, "projects");
+  const isWsl = release().toLowerCase().includes("microsoft");
+  return (isWsl && findWslDir()) || linuxDir;
+}
+
+const DIR = findDataDir();
+if (!existsSync(DIR)) fail(`No Stash data at ${DIR}. Open the Stash app once, or set STASH_DIR.`);
 
 function loadAll() {
   return readdirSync(DIR)
