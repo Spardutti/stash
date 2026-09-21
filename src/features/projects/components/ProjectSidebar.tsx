@@ -8,6 +8,7 @@ import { useSettingsActions } from "@/stores/settingsStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProjectItem } from "./ProjectItem";
+import { groupProjects } from "../utils/groupProjects";
 
 interface ProjectSidebarProps {
   view: "project" | "settings";
@@ -23,6 +24,7 @@ export function ProjectSidebar({ view, creatingProject, onCreatingProjectChange,
   const projectActions = useProjectActions();
   const settingsActions = useSettingsActions();
   const [newName, setNewName] = useState("");
+  const { active, upToDate } = groupProjects(projects);
 
   const handleCreate = async () => {
     const trimmed = newName.trim();
@@ -58,7 +60,7 @@ export function ProjectSidebar({ view, creatingProject, onCreatingProjectChange,
         <div className="mb-2 text-[0.65rem] font-bold text-on-surface-variant/40 uppercase tracking-[0.15em]">
           Projects
         </div>
-        {projects.map((project) => (
+        {active.map((project) => (
           <ProjectItem
             key={project.id}
             project={project}
@@ -91,6 +93,22 @@ export function ProjectSidebar({ view, creatingProject, onCreatingProjectChange,
               className="h-8 text-xs"
             />
           </div>
+        )}
+
+        {upToDate.length > 0 && (
+          <>
+            <div className="mt-4 mb-2 text-[0.65rem] font-bold text-on-surface-variant/40 uppercase tracking-[0.15em]">
+              Up to date
+            </div>
+            {upToDate.map((project) => (
+              <ProjectItem
+                key={project.id}
+                project={project}
+                isActive={project.id === activeProjectId}
+                onSelect={() => handleSelect(project.id)}
+              />
+            ))}
+          </>
         )}
       </nav>
 
