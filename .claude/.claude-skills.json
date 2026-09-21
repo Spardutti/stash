@@ -1,0 +1,24 @@
+{
+  "catalogVersion": "2.36.1",
+  "installedAt": "2026-09-21T11:26:52.360Z",
+  "skills": [
+    "code-structure",
+    "debugging",
+    "git-merge-conflicts",
+    "research"
+  ],
+  "commands": [
+    "discover.md",
+    "handoff.md",
+    "plan-feature.md",
+    "ship.md"
+  ],
+  "agents": [
+    "discover-critic.md",
+    "discover-framer.md",
+    "gauntlet-skills.md",
+    "plan-feature-pattern.md",
+    "plan-feature-reuse.md",
+    "plan-feature-touch-points.md"
+  ]
+}

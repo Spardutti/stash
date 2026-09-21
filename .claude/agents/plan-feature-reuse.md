@@ -1,7 +1,7 @@
 ---
 name: plan-feature-reuse
 description: Scans the codebase for existing components, hooks, utilities, services, styles, and types whose domain overlaps a proposed feature — so the feature can reuse them instead of duplicating them.
-model: haiku
+model: fable
 tools: Read, Grep, Glob
 ---
 

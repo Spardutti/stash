@@ -23,7 +23,7 @@ The orchestrator passes you a 1–2 sentence feature description.
    - **i18n**: `en.json`, `locales/`, translation keys
    - **Feature flags / config**: `flags.ts`, `config.ts`, env schemas
    - **Type / event registries**: discriminated union files, event maps, action types
-3. For each candidate, **read** enough to confirm the feature would actually need to register itself there.
+3. For each candidate, **read** enough to confirm the feature would actually need to register itself there. While reading, note the file's current line count — the planner uses this to decide whether extending it would breach the 200-line limit.
 4. Also flag any **integration tests, fixtures, or seed data** that will need updating — but only if they're a single source of truth (not every test file).
 
 ## Output format
@@ -36,18 +36,21 @@ Return **only** a JSON object. No prose.
     {
       "file": "src/router.ts",
       "line": 24,
+      "loc": 112,
       "why": "Central route registry — new feature route must be added here",
       "layer": "routing"
     },
     {
       "file": "src/db/schema.ts",
       "line": 88,
+      "loc": 240,
       "why": "Drizzle schema aggregator — new table export must be re-exported from here",
       "layer": "db"
     },
     {
       "file": "src/components/Sidebar.tsx",
       "line": 45,
+      "loc": 60,
       "why": "Navigation links list — feature needs a menu entry",
       "layer": "navigation"
     }
@@ -78,7 +81,7 @@ If the project has no central registries (e.g. fully convention-based file routi
 ## Rules
 
 - ALWAYS read the file before claiming it needs modification — no name-only guesses
-- ALWAYS include `file` and (for must_modify) `line` pointing at the registry/list to extend
+- ALWAYS include `file`, `line`, and `loc` (current total line count) for each `must_modify` entry
 - NEVER list a file the feature would only *read* from — only files it must *edit*
 - NEVER include paths that don't exist in the working tree
 - ALWAYS return valid JSON
