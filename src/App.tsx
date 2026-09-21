@@ -23,6 +23,7 @@ import {
   toggleQuickAddWindow,
 } from "@/services/quickAddWindow";
 import { initTray } from "@/services/tray";
+import { useReloadOnFocus } from "@/shared/hooks/useReloadOnFocus";
 import { MainLayout } from "@/features/layout/MainLayout";
 import { QuickAddPopup } from "@/features/quick-add/components/QuickAddPopup";
 
@@ -151,6 +152,8 @@ function MainApp() {
       unlisten.then((fn) => fn());
     };
   }, [githubToken, gistId]);
+
+  useReloadOnFocus(initialized, projectActions.initialize);
 
   // Listen for todos added from quick-add window
   useEffect(() => {
