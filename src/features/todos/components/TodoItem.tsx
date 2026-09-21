@@ -203,7 +203,7 @@ export const TodoItem = memo(function TodoItem({
                 setEditText(todo.text);
                 setIsEditing(true);
               }}
-              className="relative flex-1 text-sm font-medium break-words whitespace-pre-wrap min-w-0 cursor-pointer"
+              className="relative flex-1 text-sm font-medium wrap-anywhere whitespace-pre-wrap min-w-0 cursor-pointer"
             >
               <m.span
                 animate={{
