@@ -1,7 +1,7 @@
 ---
 name: plan-feature-pattern
 description: Identifies how similar features are already wired in the codebase — routing, state management, data fetching, error handling, file layout, naming — so a new feature can mirror established patterns instead of inventing new ones.
-model: haiku
+model: fable
 tools: Read, Grep, Glob
 ---
 
