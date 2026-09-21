@@ -1,6 +1,6 @@
 ---
 name: stash
-description: Read and write the user's Stash todos for the current project. Use when the user mentions a todo, their stash, "add this to my list", "what's left", or asks what to work on next.
+description: Read and write the user's Stash todos and projects. Use when the user mentions a todo, their stash, "add this to my list", "what's left", or asks what to work on next.
 ---
 
 # Stash todos
@@ -16,6 +16,7 @@ node ~/.claude/skills/stash/stash.mjs <command>
 | Command | Does |
 |---|---|
 | `projects` | Lists every project name with its pending count. |
+| `create "name"` | Makes a new, empty project. Fails if the name is taken. |
 | `list <project>` | Lists pending todos, top first: short id, then the label if it has one, else the text. `!` marks priority. |
 | `add <project> "text" [--label "short name"]` | Adds a todo at the top. Fills id, dates and order. |
 | `done <project> <id>` | Marks a todo done. The id can be the 8-char short id from `list`. |
@@ -28,7 +29,8 @@ node ~/.claude/skills/stash/stash.mjs <command>
 1. Run `projects`.
 2. Match the current folder name against the project names, any case.
 3. One clear match: use it.
-4. No match, or more than one: ask the user which project.
+4. More than one match: ask the user which project.
+5. No match: offer to `create` one named after the folder.
 
 ## Labels
 
