@@ -90,11 +90,21 @@ Stash stores everything locally as JSON files:
 
 | OS | Location |
 |---|---|
-| Windows | `%APPDATA%/stash/` |
-| macOS | `~/Library/Application Support/stash/` |
-| Linux | `~/.local/share/stash/` |
+| Windows | `%APPDATA%/com.stash.desktop/` |
+| macOS | `~/Library/Application Support/com.stash.desktop/` |
+| Linux | `~/.local/share/com.stash.desktop/` |
 
 No accounts, no servers, no telemetry. Your tasks are yours.
+
+## Claude Code Skill
+
+Let Claude Code read and add your todos. You need Node.js. Run this where you use Claude (macOS, Linux or WSL):
+
+```bash
+curl -fsSL --create-dirs -o ~/.claude/skills/stash/SKILL.md https://raw.githubusercontent.com/Spardutti/stash/master/claude/SKILL.md -o ~/.claude/skills/stash/stash.mjs https://raw.githubusercontent.com/Spardutti/stash/master/claude/stash.mjs
+```
+
+On Windows PowerShell, use `curl.exe` and `"$HOME/.claude/..."` in place of `~/.claude/...`. The same command is in **Settings → Claude Code**. Then ask Claude "what's on my stash?".
 
 ## License
 

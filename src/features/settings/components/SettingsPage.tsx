@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import { ShortcutList } from "./ShortcutList";
 import { DataSyncSetupModal } from "./DataSyncSetupModal";
+import { ClaudeSkillSection } from "./ClaudeSkillSection";
 
 const FONT_SIZES = [
   { value: "small" as const, label: "S" },
@@ -211,6 +212,8 @@ export function SettingsPage() {
               </h2>
               <ShortcutList />
             </div>
+
+            <ClaudeSkillSection />
 
             {/* ── DATA & SYNC ── */}
             <div>
