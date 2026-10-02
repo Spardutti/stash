@@ -20,9 +20,6 @@ const DEFAULT_SETTINGS: Settings = {
   lastProjectId: null,
   minimizeToTray: true,
   startWithSystem: false,
-  githubToken: null,
-  gistId: null,
-  lastSyncedAt: null,
   fontSize: "small",
 };
 
@@ -161,7 +158,6 @@ export async function importProjectFromJson(
 
 export async function importWorkspaceFromJson(
   json: string,
-  mode: "merge" | "replace",
 ): Promise<Project[]> {
   const parsed: unknown = JSON.parse(json);
   if (
@@ -174,14 +170,6 @@ export async function importWorkspaceFromJson(
 
   const workspace = parsed as Workspace;
   const incoming = workspace.projects.filter(isProject);
-
-  if (mode === "replace") {
-    // Delete existing projects
-    const existing = await loadAllProjects();
-    for (const p of existing) {
-      await deleteProjectFile(p);
-    }
-  }
 
   const imported: Project[] = [];
   for (const project of incoming) {

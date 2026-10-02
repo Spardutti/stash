@@ -1,17 +1,14 @@
-import { useState } from "react";
 import { save, open } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
-import { useTheme, useMinimizeToTray, useStartWithSystem, useGithubToken, useGistId, useFontSize, useSettingsActions } from "@/stores/settingsStore";
+import { useTheme, useMinimizeToTray, useStartWithSystem, useFontSize, useSettingsActions } from "@/stores/settingsStore";
 import { useProjects, useProjectActions } from "@/stores/projectStore";
 import {
   exportWorkspaceJson,
   importWorkspaceFromJson,
 } from "@/services/storage";
-import { uploadToGist, downloadFromGist } from "@/services/gistSync";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import { ShortcutList } from "./ShortcutList";
-import { DataSyncSetupModal } from "./DataSyncSetupModal";
 import { ClaudeSkillSection } from "./ClaudeSkillSection";
 
 const FONT_SIZES = [
@@ -24,63 +21,10 @@ export function SettingsPage() {
   const theme = useTheme();
   const minimizeToTray = useMinimizeToTray();
   const startWithSystem = useStartWithSystem();
-  const githubToken = useGithubToken();
-  const gistId = useGistId();
   const fontSize = useFontSize();
   const actions = useSettingsActions();
   const projects = useProjects();
   const projectActions = useProjectActions();
-  const [tokenInput, setTokenInput] = useState(githubToken ?? "");
-  const [syncStatus, setSyncStatus] = useState<{ type: "idle" | "success" | "error"; message: string }>({ type: "idle", message: "" });
-  const [syncing, setSyncing] = useState(false);
-  const [showSyncSetup, setShowSyncSetup] = useState(false);
-
-  const handleSaveToken = async () => {
-    const trimmed = tokenInput.trim();
-    await actions.setGithubToken(trimmed || null);
-    setSyncStatus({ type: "success", message: "Token saved" });
-  };
-
-  const handleUpload = async () => {
-    if (!githubToken) {
-      setSyncStatus({ type: "error", message: "Set a GitHub token first" });
-      return;
-    }
-    setSyncing(true);
-    setSyncStatus({ type: "idle", message: "" });
-    try {
-      const newGistId = await uploadToGist(githubToken, gistId, projects);
-      if (!gistId) {
-        await actions.setGistId(newGistId);
-      }
-      setSyncStatus({ type: "success", message: `Uploaded ${projects.length} project${projects.length === 1 ? "" : "s"}` });
-    } catch (e) {
-      setSyncStatus({ type: "error", message: e instanceof Error ? e.message : "Upload failed" });
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const handleDownload = async () => {
-    if (!githubToken || !gistId) {
-      setSyncStatus({ type: "error", message: gistId ? "Set a GitHub token first" : "Upload first to create a sync point" });
-      return;
-    }
-    setSyncing(true);
-    setSyncStatus({ type: "idle", message: "" });
-    try {
-      const { projects: incoming, syncedAt } = await downloadFromGist(githubToken, gistId);
-      const json = JSON.stringify({ version: 1, projects: incoming });
-      await importWorkspaceFromJson(json, "replace");
-      await projectActions.initialize();
-      localStorage.setItem("stash_lastSyncedAt", syncedAt);
-      setSyncStatus({ type: "success", message: `Downloaded ${incoming.length} project${incoming.length === 1 ? "" : "s"}` });
-    } catch (e) {
-      setSyncStatus({ type: "error", message: e instanceof Error ? e.message : "Download failed" });
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   const handleExportWorkspace = async () => {
     const path = await save({
@@ -99,7 +43,7 @@ export function SettingsPage() {
     });
     if (!path) return;
     const json = await readTextFile(path);
-    await importWorkspaceFromJson(json, "merge");
+    await importWorkspaceFromJson(json);
     await projectActions.initialize();
   };
 
@@ -215,88 +159,12 @@ export function SettingsPage() {
 
             <ClaudeSkillSection />
 
-            {/* ── DATA & SYNC ── */}
+            {/* ── DATA ── */}
             <div>
               <h2 className="mb-6 text-xs font-bold uppercase tracking-widest text-on-surface-variant/40">
-                Data & Sync
+                Data
               </h2>
               <div className="space-y-6">
-                {/* Cloud Sync */}
-                <div>
-                  <h3 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/50">
-                    Cloud Sync
-                  </h3>
-                  <button
-                    onClick={() => setShowSyncSetup(true)}
-                    className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-tertiary hover:opacity-80 transition-opacity"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                      <line x1="12" y1="17" x2="12.01" y2="17" />
-                    </svg>
-                    How do I set this up?
-                  </button>
-                  <p className="text-xs text-on-surface-variant/60 mb-4">
-                    Sync via a private GitHub Gist. The desktop app auto-downloads on launch and auto-uploads on close.
-                    On mobile, changes stay local until you tap upload — look for the "UNSAVED" indicator.
-                  </p>
-                  <div className="space-y-4">
-                    <div className="flex gap-2">
-                      <input
-                        type="password"
-                        value={tokenInput}
-                        onChange={(e) => setTokenInput(e.target.value)}
-                        placeholder="GitHub personal access token"
-                        className="flex-1 h-8 rounded-lg border border-border bg-surface-low px-3 text-sm text-foreground placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-1 focus:ring-tertiary"
-                      />
-                      <Button variant="outline" size="sm" onClick={handleSaveToken}>
-                        Save
-                      </Button>
-                    </div>
-                    {githubToken && (
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={handleUpload} disabled={syncing}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" />
-                            <line x1="12" y1="3" x2="12" y2="15" />
-                          </svg>
-                          Upload
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={handleDownload} disabled={syncing || !gistId}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="7 10 12 15 17 10" />
-                            <line x1="12" y1="15" x2="12" y2="3" />
-                          </svg>
-                          Download
-                        </Button>
-                        {syncStatus.type !== "idle" && (
-                          <span className={`text-xs ${syncStatus.type === "error" ? "text-error" : "text-tertiary"}`}>
-                            {syncStatus.message}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {gistId && (
-                      <p className="text-[10px] font-mono text-on-surface-variant/40 flex items-center gap-2">
-                        Gist ID: {gistId}
-                        <button
-                          onClick={() => navigator.clipboard.writeText(gistId)}
-                          className="text-on-surface-variant/60 hover:text-foreground transition-colors"
-                          title="Copy Gist ID"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                          </svg>
-                        </button>
-                      </p>
-                    )}
-                  </div>
-                </div>
-
                 {/* Workspace import/export */}
                 <div>
                   <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/50">
@@ -327,7 +195,6 @@ export function SettingsPage() {
         </div>
       </div>
     </div>
-    <DataSyncSetupModal open={showSyncSetup} onClose={() => setShowSyncSetup(false)} />
     </>
   );
 }
