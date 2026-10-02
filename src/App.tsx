@@ -1,43 +1,25 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import {
-  register,
-  unregister,
-} from "@tauri-apps/plugin-global-shortcut";
 import { useProjectActions } from "@/stores/projectStore";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { exit } from "@tauri-apps/plugin-process";
 import {
-  useHotkey,
-  useQuickViewHotkey,
   useMinimizeToTray,
   useSettingsActions,
   useSettingsInitialized,
 } from "@/stores/settingsStore";
-import {
-  ensureQuickAddWindow,
-  toggleQuickAddWindow,
-} from "@/services/quickAddWindow";
+import { ensureQuickAddWindow } from "@/services/quickAddWindow";
 import { initTray } from "@/services/tray";
 import { useReloadOnFocus } from "@/shared/hooks/useReloadOnFocus";
+import {
+  useQuickAddShortcut,
+  useShowWindowShortcut,
+} from "@/shared/hooks/useGlobalShortcuts";
 import { MainLayout } from "@/features/layout/MainLayout";
 import { QuickAddPopup } from "@/features/quick-add/components/QuickAddPopup";
 
 const params = new URLSearchParams(window.location.search);
 const windowType = params.get("window");
-
-/** Convert stored hotkey format ("Ctrl+Shift+Space") to Tauri format ("Control+Shift+Space") */
-function toTauriShortcut(hotkey: string): string {
-  return hotkey
-    .split("+")
-    .map((part) => {
-      const p = part.trim();
-      if (p === "Ctrl") return "Control";
-      if (p === " " || p === "") return "Space";
-      return p;
-    })
-    .join("+");
-}
 
 let didInit = false;
 
@@ -45,8 +27,6 @@ function MainApp() {
   const projectActions = useProjectActions();
   const settingsActions = useSettingsActions();
   const initialized = useSettingsInitialized();
-  const hotkey = useHotkey();
-  const quickViewHotkey = useQuickViewHotkey();
   const minimizeToTray = useMinimizeToTray();
   const [error, setError] = useState<string | null>(null);
 
@@ -122,73 +102,8 @@ function MainApp() {
     );
   }, [initialized]);
 
-  // Register global shortcut for quick-add popup
-  useEffect(() => {
-    if (!initialized) return;
-
-    const shortcut = toTauriShortcut(hotkey);
-    let registered = true;
-
-    unregister(shortcut)
-      .catch(() => {})
-      .then(() =>
-        register(shortcut, (event) => {
-          if (event.state === "Pressed") {
-            toggleQuickAddWindow();
-          }
-        }),
-      )
-      .catch((err) => {
-        console.error("Failed to register quick-add shortcut:", err);
-        registered = false;
-      });
-
-    return () => {
-      if (registered) {
-        unregister(shortcut).catch(() => {});
-      }
-    };
-  }, [initialized, hotkey]);
-
-  // Register global shortcut to show/focus the main window
-  useEffect(() => {
-    if (!initialized) return;
-
-    const shortcut = toTauriShortcut(quickViewHotkey);
-    let registered = true;
-
-    unregister(shortcut)
-      .catch(() => {})
-      .then(() =>
-        register(shortcut, async (event) => {
-          if (event.state === "Pressed") {
-            const win = getCurrentWindow();
-            const [visible, focused, minimized] = await Promise.all([
-              win.isVisible(),
-              win.isFocused(),
-              win.isMinimized(),
-            ]);
-            if (visible && focused && !minimized) {
-              await win.hide();
-            } else {
-              await win.show();
-              await win.unminimize();
-              await win.setFocus();
-            }
-          }
-        }),
-      )
-      .catch((err) => {
-        console.error("Failed to register show-window shortcut:", err);
-        registered = false;
-      });
-
-    return () => {
-      if (registered) {
-        unregister(shortcut).catch(() => {});
-      }
-    };
-  }, [initialized, quickViewHotkey]);
+  useQuickAddShortcut(initialized);
+  useShowWindowShortcut(initialized);
 
   if (error) {
     return (

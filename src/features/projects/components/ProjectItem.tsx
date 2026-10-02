@@ -3,7 +3,8 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import type { Project } from "@/types";
 import { useProjectActions } from "@/stores/projectStore";
-import { exportProjectJson, slugify } from "@/services/storage";
+import { slugify } from "@/services/storage";
+import { exportProjectJson } from "@/services/workspaceTransfer";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,

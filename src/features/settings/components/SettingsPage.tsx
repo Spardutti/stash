@@ -5,7 +5,7 @@ import { useProjects, useProjectActions } from "@/stores/projectStore";
 import {
   exportWorkspaceJson,
   importWorkspaceFromJson,
-} from "@/services/storage";
+} from "@/services/workspaceTransfer";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import { ShortcutList } from "./ShortcutList";
