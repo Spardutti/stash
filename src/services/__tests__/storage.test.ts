@@ -1,5 +1,6 @@
 import { describe, test, expect } from "vitest";
-import { slugify, generateId, exportProjectJson, exportWorkspaceJson } from "../storage";
+import { slugify, generateId } from "../storage";
+import { exportProjectJson, exportWorkspaceJson } from "../workspaceTransfer";
 import type { Project } from "@/types";
 
 describe("slugify", () => {
